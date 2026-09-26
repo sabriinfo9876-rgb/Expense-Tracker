@@ -1,0 +1,6 @@
+{
+  "name": "Personal Expense Tracker",
+  "description": "A modern, responsive personal expense tracker to manage spending, track categories, and view real-time financial summaries.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
