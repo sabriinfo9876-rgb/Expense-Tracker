@@ -1,5 +1,5 @@
-import React from 'react';
-import { CurrencyCode, CurrencyFormat } from '../types';
+import React, { useEffect } from 'react';
+import { CurrencyCode } from '../types';
 import { SUPPORTED_CURRENCIES, formatCurrency } from '../utils/formatters';
 import { XIcon, CheckIcon } from './Icons';
 
@@ -16,32 +16,49 @@ export const CurrencySelectorModal: React.FC<CurrencySelectorModalProps> = ({
   selectedCurrency,
   onSelectCurrency,
 }) => {
+  // Keyboard Escape listener
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const sampleAmount = 75450;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-900/60 backdrop-blur-2xs"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-black/70 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
       aria-labelledby="currency-modal-title"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
     >
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
         {/* Header */}
-        <div className="flex items-center justify-between px-3.5 sm:px-5 py-3 sm:py-4 border-b border-slate-200 bg-slate-50">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
           <div className="min-w-0 pr-2">
-            <h3 id="currency-modal-title" className="text-xs sm:text-sm font-bold text-slate-900 truncate">
-              Currency Formatter & Settings
+            <h3 id="currency-modal-title" className="text-sm font-bold text-slate-900 dark:text-white truncate">
+              Currency Formatter
             </h3>
-            <p className="text-[10px] sm:text-xs text-slate-500 truncate">
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
               Select your preferred display currency and symbol
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 transition-colors cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center shrink-0"
+            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center shrink-0"
             aria-label="Close currency modal"
           >
             <XIcon className="w-4 h-4" />
@@ -49,7 +66,7 @@ export const CurrencySelectorModal: React.FC<CurrencySelectorModalProps> = ({
         </div>
 
         {/* Currency List */}
-        <div className="p-3 sm:p-4 space-y-2 max-h-[60vh] overflow-y-auto">
+        <div className="p-4 space-y-2 max-h-[60vh] overflow-y-auto">
           {SUPPORTED_CURRENCIES.map((curr) => {
             const isSelected = selectedCurrency === curr.code;
             const previewText = formatCurrency(sampleAmount, curr.code);
@@ -62,34 +79,34 @@ export const CurrencySelectorModal: React.FC<CurrencySelectorModalProps> = ({
                   onSelectCurrency(curr.code);
                   onClose();
                 }}
-                className={`w-full p-2.5 sm:p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer min-h-[44px] ${
+                className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer min-h-[46px] ${
                   isSelected
-                    ? 'border-indigo-600 bg-indigo-50/70 shadow-2xs'
-                    : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/70 dark:bg-indigo-950/40 shadow-xs'
+                    : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60'
                 }`}
               >
-                <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
                   <div
-                    className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg font-mono font-bold text-xs flex items-center justify-center shrink-0 ${
+                    className={`w-9 h-9 rounded-lg font-mono font-bold text-xs flex items-center justify-center shrink-0 ${
                       isSelected
                         ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-100 text-slate-700'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                     }`}
                   >
                     {curr.symbol.trim() || curr.code}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-xs font-semibold text-slate-900 truncate">
+                    <div className="text-xs font-semibold text-slate-900 dark:text-white truncate">
                       {curr.label}
                     </div>
-                    <div className="text-[10px] sm:text-[11px] text-slate-400 font-mono truncate">
-                      Preview: <span className="font-semibold text-slate-700">{previewText}</span>
+                    <div className="text-xs text-slate-400 dark:text-slate-500 font-mono truncate">
+                      Preview: <span className="font-semibold text-slate-700 dark:text-slate-300">{previewText}</span>
                     </div>
                   </div>
                 </div>
 
                 {isSelected && (
-                  <div className="w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 ml-2">
+                  <div className="w-5 h-5 rounded-full bg-indigo-600 dark:bg-indigo-500 text-white flex items-center justify-center shrink-0 ml-2">
                     <CheckIcon className="w-3 h-3" />
                   </div>
                 )}
@@ -99,12 +116,12 @@ export const CurrencySelectorModal: React.FC<CurrencySelectorModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-3.5 sm:px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between text-[11px] sm:text-xs text-slate-500">
-          <span className="truncate pr-2">Updates all charts & tables</span>
+        <div className="px-5 py-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <span className="truncate pr-2">Updates all dashboard calculations</span>
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer min-h-[36px] shrink-0"
+            className="px-3 py-1.5 font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors cursor-pointer min-h-[36px] shrink-0"
           >
             Close
           </button>

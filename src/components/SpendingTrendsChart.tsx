@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
-import { Expense, ExpenseCategory } from '../types';
+import { Expense, ExpenseCategory, CurrencyCode } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { CATEGORIES, CATEGORY_COLORS } from '../data/sampleExpenses';
 import { CategoryIcon, ArrowTrendingUpIcon } from './Icons';
 
 interface SpendingTrendsChartProps {
   expenses: Expense[];
+  selectedCurrency?: CurrencyCode;
 }
 
-export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expenses }) => {
+export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expenses, selectedCurrency }) => {
   const [viewMode, setViewMode] = useState<'timeline' | 'category'>('timeline');
   const [hoveredItem, setHoveredItem] = useState<{
     label: string;
@@ -21,18 +22,16 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
   const timelineData = useMemo(() => {
     const map = new Map<string, { date: string; amount: number; count: number }>();
 
-    // Sort chronologically
-    const sorted = [...expenses].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
+    const sorted = [...expenses].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
     sorted.forEach((exp) => {
+      const amt = Number.isFinite(exp.amount) ? exp.amount : 0;
       const existing = map.get(exp.date);
       if (existing) {
-        existing.amount += exp.amount;
+        existing.amount += amt;
         existing.count += 1;
       } else {
-        map.set(exp.date, { date: exp.date, amount: exp.amount, count: 1 });
+        map.set(exp.date, { date: exp.date, amount: amt, count: 1 });
       }
     });
 
@@ -41,11 +40,11 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
 
   // 2. Group expenses by category
   const categoryData = useMemo(() => {
-    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    const total = expenses.reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
 
     return CATEGORIES.map((cat) => {
       const catExpenses = expenses.filter((e) => e.category === cat);
-      const amount = catExpenses.reduce((sum, e) => sum + e.amount, 0);
+      const amount = catExpenses.reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
       const percentage = total > 0 ? (amount / total) * 100 : 0;
       return {
         category: cat,
@@ -74,12 +73,12 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
 
   if (expenses.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200/90 p-6 shadow-xs text-center">
-        <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-400 mx-auto flex items-center justify-center mb-2">
+      <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-xs text-center transition-colors">
+        <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 mx-auto flex items-center justify-center mb-2">
           <ArrowTrendingUpIcon className="w-5 h-5" />
         </div>
-        <h3 className="text-sm font-semibold text-slate-800">Spending Trends</h3>
-        <p className="text-xs text-slate-500 mt-1">
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Spending Trends</h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
           Add your first expenses to visualize spending trends over time.
         </p>
       </div>
@@ -87,39 +86,37 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs w-full overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-xs w-full overflow-hidden transition-colors">
       {/* Header and View Mode Switcher */}
-      <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-100">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <ArrowTrendingUpIcon className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
-                Spending Trends & Analytics
-              </h2>
-              <p className="text-[11px] sm:text-xs text-slate-500">
-                {viewMode === 'timeline'
-                  ? 'Daily expenditure distribution across logged dates'
-                  : 'Spending breakdown ranked by category volume'}
-              </p>
-            </div>
+      <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 pb-3.5 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+            <ArrowTrendingUpIcon className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
+              Spending Trends & Pacing
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {viewMode === 'timeline'
+                ? 'Daily expenditure distribution across logged dates'
+                : 'Spending breakdown ranked by category volume'}
+            </p>
           </div>
         </div>
 
         {/* View Toggle Tabs */}
-        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-lg shrink-0">
+        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg shrink-0">
           <button
             type="button"
             onClick={() => {
               setViewMode('timeline');
               setHoveredItem(null);
             }}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
               viewMode === 'timeline'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Daily Timeline
@@ -130,10 +127,10 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
               setViewMode('category');
               setHoveredItem(null);
             }}
-            className={`px-3 py-1 text-xs font-medium rounded-md transition-colors cursor-pointer ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors cursor-pointer ${
               viewMode === 'category'
-                ? 'bg-white text-slate-900 shadow-xs'
-                : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             By Category
@@ -142,43 +139,43 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
       </div>
 
       {/* Key Insight Pill Row */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 text-xs text-slate-600 border-b border-slate-100">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 text-xs text-slate-600 dark:text-slate-400 border-b border-slate-100 dark:border-slate-800">
         {peakDay && (
           <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-slate-700">Peak Spending Day:</span>
-            <span className="text-indigo-600 font-medium">{formatDate(peakDay.date)}</span>
-            <span className="text-slate-400">·</span>
-            <span className="font-mono tabular-nums font-semibold text-slate-900">
-              {formatCurrency(peakDay.amount)}
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Peak Spending Day:</span>
+            <span className="text-indigo-600 dark:text-indigo-400 font-medium">{formatDate(peakDay.date)}</span>
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="font-mono tabular-nums font-bold text-slate-900 dark:text-white">
+              {formatCurrency(peakDay.amount, selectedCurrency)}
             </span>
           </div>
         )}
 
         {categoryData[0] && categoryData[0].amount > 0 && (
           <div className="flex items-center gap-1.5">
-            <span className="font-semibold text-slate-700">Top Category:</span>
-            <span className="text-emerald-700 font-medium">{categoryData[0].category}</span>
-            <span className="text-slate-400">·</span>
-            <span className="font-mono tabular-nums font-semibold text-slate-900">
-              {formatCurrency(categoryData[0].amount)} ({categoryData[0].percentage.toFixed(0)}%)
+            <span className="font-semibold text-slate-700 dark:text-slate-300">Top Category:</span>
+            <span className="text-emerald-700 dark:text-emerald-400 font-medium">{categoryData[0].category}</span>
+            <span className="text-slate-300 dark:text-slate-600">·</span>
+            <span className="font-mono tabular-nums font-bold text-slate-900 dark:text-white">
+              {formatCurrency(categoryData[0].amount, selectedCurrency)} ({categoryData[0].percentage.toFixed(0)}%)
             </span>
           </div>
         )}
       </div>
 
       {/* Active Hover Tooltip Box */}
-      <div className="min-h-7 py-1 flex items-center justify-between text-xs">
+      <div className="min-h-8 py-1.5 flex items-center justify-between text-xs">
         {hoveredItem ? (
-          <div className="flex items-center gap-2 text-indigo-900 bg-indigo-50/80 px-2.5 py-1 rounded-md border border-indigo-100">
+          <div className="flex items-center gap-2 text-indigo-950 dark:text-indigo-200 bg-indigo-50/90 dark:bg-indigo-950/60 px-3 py-1 rounded-md border border-indigo-200 dark:border-indigo-800/80">
             <span className="font-semibold">{hoveredItem.label}</span>
             <span className="text-slate-400">·</span>
-            <span className="font-mono font-bold tabular-nums text-indigo-700">
-              {formatCurrency(hoveredItem.amount)}
+            <span className="font-mono font-bold tabular-nums text-indigo-700 dark:text-indigo-300">
+              {formatCurrency(hoveredItem.amount, selectedCurrency)}
             </span>
-            <span className="text-slate-500">({hoveredItem.count} {hoveredItem.count === 1 ? 'item' : 'items'})</span>
+            <span className="text-slate-500 dark:text-slate-400">({hoveredItem.count} {hoveredItem.count === 1 ? 'entry' : 'entries'})</span>
           </div>
         ) : (
-          <span className="text-slate-400 text-[11px] italic">
+          <span className="text-slate-400 dark:text-slate-500 text-xs italic">
             Hover over any bar to view exact transaction details
           </span>
         )}
@@ -186,13 +183,13 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
 
       {/* View 1: Timeline Bar Chart */}
       {viewMode === 'timeline' && (
-        <div className="pt-3 overflow-x-auto no-scrollbar">
-          <div className="h-44 sm:h-48 min-w-[260px] w-full flex items-end gap-1.5 sm:gap-3 px-1 sm:px-2 pb-6 border-b border-slate-200 relative">
+        <div className="pt-2 overflow-x-auto no-scrollbar">
+          <div className="h-44 sm:h-48 min-w-[260px] w-full flex items-end gap-1.5 sm:gap-3 px-1 sm:px-2 pb-6 border-b border-slate-200 dark:border-slate-800 relative">
             {/* Horizontal Grid lines */}
-            <div className="absolute inset-0 pointer-events-none flex flex-col justify-between pb-6 text-[10px] text-slate-300">
-              <div className="border-b border-dashed border-slate-200 w-full" />
-              <div className="border-b border-dashed border-slate-200 w-full" />
-              <div className="border-b border-dashed border-slate-200 w-full" />
+            <div className="absolute inset-0 pointer-events-none flex flex-col justify-between pb-6 text-[10px] text-slate-300 dark:text-slate-800">
+              <div className="border-b border-dashed border-slate-200 dark:border-slate-800 w-full" />
+              <div className="border-b border-dashed border-slate-200 dark:border-slate-800 w-full" />
+              <div className="border-b border-dashed border-slate-200 dark:border-slate-800 w-full" />
             </div>
 
             {timelineData.map((d) => {
@@ -219,28 +216,27 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
                   }
                   onMouseLeave={() => setHoveredItem(null)}
                 >
-                  {/* Amount label on hover */}
                   <div
                     className={`w-full max-w-[48px] rounded-t-md transition-all duration-200 ${
                       isHovered
-                        ? 'bg-indigo-600 shadow-md scale-y-105 origin-bottom'
-                        : 'bg-indigo-400/85 hover:bg-indigo-500'
+                        ? 'bg-indigo-600 dark:bg-indigo-500 shadow-md scale-y-105 origin-bottom'
+                        : 'bg-indigo-400/85 dark:bg-indigo-500/70 hover:bg-indigo-500 dark:hover:bg-indigo-400'
                     }`}
                     style={{ height: `${heightPercent}%` }}
                   />
 
                   {/* X Axis Label */}
-                  <div className="absolute -bottom-6 text-[9px] sm:text-xs text-slate-500 font-mono whitespace-nowrap truncate max-w-full text-center">
-                    {d.date.slice(5)} {/* MM-DD */}
+                  <div className="absolute -bottom-6 text-[10px] text-slate-500 dark:text-slate-400 font-mono whitespace-nowrap truncate max-w-full text-center">
+                    {d.date.slice(5)}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 mt-7 min-w-[260px]">
+          <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 mt-7 min-w-[260px]">
             <span>Earliest Date</span>
-            <span className="font-mono">Daily Spending</span>
+            <span className="font-mono">Daily Timeline</span>
             <span>Latest Date</span>
           </div>
         </div>
@@ -248,7 +244,7 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
 
       {/* View 2: By Category Comparison */}
       {viewMode === 'category' && (
-        <div className="pt-3 space-y-3">
+        <div className="pt-3 space-y-3.5">
           {categoryData.map((item) => {
             const widthPct = Math.max((item.amount / maxCategoryAmount) * 100, 2);
             const isHovered = hoveredItem?.label === item.category;
@@ -256,7 +252,7 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
             return (
               <div
                 key={item.category}
-                className="space-y-1 cursor-pointer group"
+                className="space-y-1.5 cursor-pointer group"
                 onMouseEnter={() =>
                   setHoveredItem({
                     label: item.category,
@@ -267,24 +263,24 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
                 onMouseLeave={() => setHoveredItem(null)}
               >
                 <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5 font-medium text-slate-700">
-                    <CategoryIcon category={item.category as ExpenseCategory} className="w-3.5 h-3.5 text-slate-500" />
+                  <div className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
+                    <CategoryIcon category={item.category as ExpenseCategory} className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                     <span>{item.category}</span>
-                    <span className="text-[11px] text-slate-400 font-mono">
+                    <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">
                       ({item.count} items)
                     </span>
                   </div>
 
-                  <div className="font-mono tabular-nums text-slate-900 font-semibold text-xs flex items-center gap-2">
-                    <span>{formatCurrency(item.amount)}</span>
-                    <span className="text-slate-400 font-normal w-10 text-right">
+                  <div className="font-mono tabular-nums text-slate-900 dark:text-white font-semibold text-xs flex items-center gap-2">
+                    <span>{formatCurrency(item.amount, selectedCurrency)}</span>
+                    <span className="text-slate-400 dark:text-slate-500 font-normal w-10 text-right">
                       {item.percentage.toFixed(1)}%
                     </span>
                   </div>
                 </div>
 
                 {/* Bar */}
-                <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                   <div
                     className={`h-full ${CATEGORY_COLORS[item.category as ExpenseCategory].bar} rounded-full transition-all duration-300 ${
                       isHovered ? 'brightness-110' : ''

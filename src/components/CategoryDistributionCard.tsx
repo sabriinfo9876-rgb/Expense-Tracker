@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Expense, ExpenseCategory, CategoryFilter } from '../types';
+import { Expense, ExpenseCategory, CategoryFilter, CurrencyCode } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { CATEGORIES, CATEGORY_COLORS } from '../data/sampleExpenses';
 import { CategoryIcon, PieChartIcon } from './Icons';
@@ -8,27 +8,30 @@ interface CategoryDistributionCardProps {
   expenses: Expense[];
   activeCategory: CategoryFilter;
   onSelectCategory: (category: CategoryFilter) => void;
+  selectedCurrency?: CurrencyCode;
 }
 
 export const CategoryDistributionCard: React.FC<CategoryDistributionCardProps> = ({
   expenses,
   activeCategory,
   onSelectCategory,
+  selectedCurrency,
 }) => {
   const [hoveredCategory, setHoveredCategory] = useState<ExpenseCategory | null>(null);
 
   const totalSpent = useMemo(() => {
-    return expenses.reduce((sum, e) => sum + e.amount, 0);
+    return expenses.reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
   }, [expenses]);
 
   // Aggregate by category
   const categoryStats = useMemo(() => {
     return CATEGORIES.map((cat) => {
       const items = expenses.filter((e) => e.category === cat);
-      const amount = items.reduce((sum, e) => sum + e.amount, 0);
+      const amount = items.reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
       const percentage = totalSpent > 0 ? (amount / totalSpent) * 100 : 0;
       const count = items.length;
-      const highest = items.length > 0 ? items.reduce((max, i) => (i.amount > max.amount ? i : max), items[0]) : null;
+      const validItems = items.filter((i) => Number.isFinite(i.amount));
+      const highest = validItems.length > 0 ? validItems.reduce((max, i) => (i.amount > max.amount ? i : max), validItems[0]) : null;
 
       return {
         category: cat,
@@ -71,18 +74,18 @@ export const CategoryDistributionCard: React.FC<CategoryDistributionCardProps> =
     : null;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs w-full overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-xs w-full overflow-hidden transition-colors">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3.5 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
             <PieChartIcon className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
               Category Distribution
-            </h2>
-            <p className="text-[11px] sm:text-xs text-slate-500">
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Proportional expenditure breakdown across categories
             </p>
           </div>
@@ -92,15 +95,15 @@ export const CategoryDistributionCard: React.FC<CategoryDistributionCardProps> =
           <button
             type="button"
             onClick={() => onSelectCategory('All')}
-            className="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded-md hover:bg-indigo-50 transition-colors cursor-pointer self-start sm:self-auto"
+            className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-semibold px-2.5 py-1 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors cursor-pointer self-start sm:self-auto"
           >
-            Clear Category Filter ({activeCategory})
+            Clear Filter ({activeCategory})
           </button>
         )}
       </div>
 
       {totalSpent === 0 ? (
-        <div className="py-8 text-center text-slate-400 text-xs">
+        <div className="py-10 text-center text-slate-400 dark:text-slate-500 text-xs">
           No expenses recorded for this period.
         </div>
       ) : (
@@ -118,7 +121,8 @@ export const CategoryDistributionCard: React.FC<CategoryDistributionCardProps> =
                   cy="50"
                   r="42"
                   fill="transparent"
-                  stroke="#f1f5f9"
+                  stroke="currentColor"
+                  className="text-slate-100 dark:text-slate-800"
                   strokeWidth="12"
                 />
 
@@ -127,7 +131,6 @@ export const CategoryDistributionCard: React.FC<CategoryDistributionCardProps> =
                   const isHovered = hoveredCategory === seg.category;
                   const isSelected = activeCategory === seg.category;
 
-                  // Map category bar background to SVG stroke color
                   const strokeColors: Record<ExpenseCategory, string> = {
                     Food: '#10b981',
                     Transport: '#0ea5e9',
@@ -160,20 +163,20 @@ export const CategoryDistributionCard: React.FC<CategoryDistributionCardProps> =
 
               {/* Center Content */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
-                <span className="text-[10px] uppercase font-semibold text-slate-400 truncate max-w-full">
+                <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 truncate max-w-full">
                   {activeStat ? activeStat.category : 'Total Spent'}
                 </span>
-                <span className="text-base font-bold font-mono tabular-nums text-slate-900 leading-tight">
-                  {formatCurrency(activeStat ? activeStat.amount : totalSpent)}
+                <span className="text-base font-bold font-mono tabular-nums text-slate-900 dark:text-white leading-tight">
+                  {formatCurrency(activeStat ? activeStat.amount : totalSpent, selectedCurrency)}
                 </span>
-                <span className="text-[11px] font-mono font-medium text-slate-500">
-                  {activeStat ? `${activeStat.percentage.toFixed(1)}%` : `${expenses.length} items`}
+                <span className="text-xs font-mono font-medium text-slate-500 dark:text-slate-400">
+                  {activeStat ? `${activeStat.percentage.toFixed(1)}%` : `${expenses.length} entries`}
                 </span>
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-400 mt-2 text-center">
-              Click any category slice or card to filter
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 text-center">
+              Click slice to filter ledger
             </p>
           </div>
 
@@ -194,36 +197,36 @@ export const CategoryDistributionCard: React.FC<CategoryDistributionCardProps> =
                   onMouseLeave={() => setHoveredCategory(null)}
                   className={`p-2.5 rounded-lg border transition-all cursor-pointer ${
                     isSelected
-                      ? 'border-indigo-600 bg-indigo-50/60 shadow-xs'
+                      ? 'border-indigo-600 dark:border-indigo-500 bg-indigo-50/60 dark:bg-indigo-950/40 shadow-xs'
                       : isHovered
-                      ? 'border-slate-300 bg-slate-50 shadow-2xs'
-                      : 'border-slate-100 bg-white hover:border-slate-200'
+                      ? 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 shadow-2xs'
+                      : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-200 dark:hover:border-slate-700'
                   }`}
                 >
                   <div className="flex items-center justify-between text-xs mb-1.5">
                     <div className="flex items-center gap-2">
                       <span className={`w-2.5 h-2.5 rounded-full ${CATEGORY_COLORS[item.category].bar}`} />
-                      <span className="font-semibold text-slate-800 flex items-center gap-1">
-                        <CategoryIcon category={item.category} className="w-3.5 h-3.5 text-slate-500" />
+                      <span className="font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                        <CategoryIcon category={item.category} className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                         {item.category}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-mono">
-                        ({item.count} {item.count === 1 ? 'item' : 'items'})
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">
+                        ({item.count})
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold tabular-nums text-slate-900 text-xs">
-                        {formatCurrency(item.amount)}
+                      <span className="font-mono font-bold tabular-nums text-slate-900 dark:text-white text-xs">
+                        {formatCurrency(item.amount, selectedCurrency)}
                       </span>
-                      <span className="font-mono text-slate-500 text-[11px] font-medium w-11 text-right">
+                      <span className="font-mono text-slate-500 dark:text-slate-400 text-xs font-medium w-11 text-right">
                         {item.percentage.toFixed(1)}%
                       </span>
                     </div>
                   </div>
 
                   {/* Horizontal Bar */}
-                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                     <div
                       className={`h-full ${CATEGORY_COLORS[item.category].bar} rounded-full transition-all duration-300`}
                       style={{ width: `${item.percentage}%` }}
@@ -231,9 +234,9 @@ export const CategoryDistributionCard: React.FC<CategoryDistributionCardProps> =
                   </div>
 
                   {item.highest && (
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5 font-mono">
+                    <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-mono">
                       <span className="truncate max-w-[120px] xs:max-w-[180px] sm:max-w-[200px]">Top: {item.highest.title}</span>
-                      <span>{formatCurrency(item.highest.amount)}</span>
+                      <span>{formatCurrency(item.highest.amount, selectedCurrency)}</span>
                     </div>
                   )}
                 </div>

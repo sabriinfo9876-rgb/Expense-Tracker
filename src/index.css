@@ -4,6 +4,8 @@
   --breakpoint-xs: 440px;
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   *, ::before, ::after {
     box-sizing: border-box;
@@ -22,6 +24,14 @@
     color: #0f172a;
     background-color: #f8fafc;
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  html.dark body {
+    color: #f8fafc;
+    background-color: #090d16;
   }
 
   /* Prevent automatic iOS zoom while keeping crisp desktop sizes */
@@ -55,15 +65,29 @@
   }
 }
 
+/* Production-grade Print Styles: clean ink-friendly white output in both light & dark mode */
 @media print {
-  body {
+  html, html.dark, body, html.dark body {
     background-color: #ffffff !important;
     color: #0f172a !important;
-    font-size: 12pt;
+    font-size: 11pt;
   }
 
-  header, footer, .no-print {
+  header, footer, nav, .no-print, [role="alert"] {
     display: none !important;
+  }
+
+  /* Ensure modal dialog expands naturally onto printable page without backdrop overlay */
+  [role="dialog"] {
+    position: static !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    inset: auto !important;
+    box-shadow: none !important;
+    max-height: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   .print-container {
@@ -72,11 +96,32 @@
     max-width: 100% !important;
     box-shadow: none !important;
     border: none !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .print-container * {
+    background-color: transparent !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+
+  .print-container th {
+    background-color: #f1f5f9 !important;
+  }
+
+  table {
+    page-break-inside: auto;
+    width: 100% !important;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
   }
 
   .page-break {
     page-break-before: always;
   }
 }
-
-

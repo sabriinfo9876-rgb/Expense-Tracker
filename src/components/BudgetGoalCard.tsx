@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Expense } from '../types';
+import { Expense, CurrencyCode } from '../types';
 import { formatCurrency } from '../utils/formatters';
-import { CheckIcon, EditIcon, XIcon, TargetIcon, CalendarIcon } from './Icons';
+import { CheckIcon, EditIcon, XIcon, TargetIcon } from './Icons';
 
 interface BudgetGoalCardProps {
   expenses: Expense[];
@@ -9,6 +9,7 @@ interface BudgetGoalCardProps {
   isBudgetGoalEnabled: boolean;
   onToggleBudgetGoal: () => void;
   onUpdateBudget: (newBudget: number) => void;
+  selectedCurrency?: CurrencyCode;
 }
 
 export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
@@ -17,17 +18,18 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
   isBudgetGoalEnabled,
   onToggleBudgetGoal,
   onUpdateBudget,
+  selectedCurrency,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [budgetValue, setBudgetValue] = useState(monthlyBudget.toString());
   const [error, setError] = useState<string | null>(null);
 
-  // Total spent calculation
-  const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+  // Total spent calculation with finite numbers guard
+  const totalSpent = expenses.reduce((sum, exp) => sum + (Number.isFinite(exp.amount) ? exp.amount : 0), 0);
   const percentUsed = monthlyBudget > 0 ? (totalSpent / monthlyBudget) * 100 : 0;
-  const clampedPercent = Math.min(percentUsed, 100);
-  const remaining = monthlyBudget - totalSpent;
-  const isOverBudget = remaining < 0;
+  const clampedPercent = Math.min(Math.max(percentUsed, 0), 100);
+  const remaining = Math.round((monthlyBudget - totalSpent) * 100) / 100;
+  const isOverBudget = remaining < -0.001;
 
   // Days in current month calculations
   const now = new Date();
@@ -36,27 +38,28 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
   const totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const currentDay = now.getDate();
   const daysLeft = Math.max(0, totalDaysInMonth - currentDay);
-  
+
   // Feature: Daily Spending Goal & Pacing Calculations
-  // Days remaining including today as an active spending day:
   const daysRemaining = Math.max(1, totalDaysInMonth - currentDay + 1);
   const baselineDailyGoal = monthlyBudget > 0 ? monthlyBudget / totalDaysInMonth : 0;
   const suggestedDailyAllowance = remaining > 0 ? remaining / daysRemaining : 0;
   const spentToday = expenses
     .filter((e) => e.date === todayString)
-    .reduce((sum, e) => sum + e.amount, 0);
-  const expectedSpendingToDate = baselineDailyGoal * currentDay;
-  const pacingDiff = expectedSpendingToDate - totalSpent;
+    .reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
   const monthElapsedPct = (currentDay / totalDaysInMonth) * 100;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const val = parseFloat(budgetValue);
-    if (isNaN(val) || val <= 0) {
+    if (isNaN(val) || !Number.isFinite(val) || val <= 0) {
       setError('Please enter a valid budget amount greater than 0.');
       return;
     }
-    onUpdateBudget(val);
+    if (val > 1000000000) {
+      setError('Budget cannot exceed 1,000,000,000.');
+      return;
+    }
+    onUpdateBudget(Math.round(val * 100) / 100);
     setIsEditing(false);
     setError(null);
   };
@@ -71,20 +74,20 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
   // Status badge styling
   let statusBadge = {
     label: 'On Track',
-    textClass: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+    badgeClass: 'text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800/80',
     barClass: 'bg-emerald-500',
   };
 
   if (percentUsed >= 100) {
     statusBadge = {
       label: 'Over Budget',
-      textClass: 'text-rose-700 bg-rose-50 border-rose-200',
+      badgeClass: 'text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 border-rose-200 dark:border-rose-800/80',
       barClass: 'bg-rose-500',
     };
   } else if (percentUsed >= 80) {
     statusBadge = {
       label: 'Approaching Limit',
-      textClass: 'text-amber-700 bg-amber-50 border-amber-200',
+      badgeClass: 'text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800/80',
       barClass: 'bg-amber-500',
     };
   }
@@ -92,72 +95,65 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
   // Daily Pacing Status
   let pacingStatus = {
     badge: 'On Pace',
-    badgeClass: 'bg-emerald-100 text-emerald-800',
-    description: `You are pacing well against your planned daily budget.`,
+    badgeClass: 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+    description: `Spending is well-paced against your monthly allowance.`,
   };
 
   if (isOverBudget) {
     pacingStatus = {
       badge: 'Budget Depleted',
-      badgeClass: 'bg-rose-100 text-rose-800',
-      description: `Monthly budget exceeded. Suggested allowance is 0 for remaining days.`,
+      badgeClass: 'bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+      description: `Monthly budget exceeded. Limit spending to stay balanced.`,
     };
   } else if (suggestedDailyAllowance < baselineDailyGoal * 0.7) {
     pacingStatus = {
       badge: 'Pacing Fast',
-      badgeClass: 'bg-amber-100 text-amber-800',
-      description: `Higher spending early in the month. Limit to ${formatCurrency(suggestedDailyAllowance)}/day to finish under budget.`,
+      badgeClass: 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      description: `Higher spending early this month. Suggested: ${formatCurrency(suggestedDailyAllowance, selectedCurrency)}/day remaining.`,
     };
   } else if (suggestedDailyAllowance > baselineDailyGoal * 1.1) {
     pacingStatus = {
-      badge: 'Ahead of Pace',
-      badgeClass: 'bg-emerald-100 text-emerald-800',
-      description: `Great discipline! You have extra headroom of ${formatCurrency(suggestedDailyAllowance)}/day for the rest of the month.`,
+      badge: 'Under Budget',
+      badgeClass: 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+      description: `Healthy headroom! You can spend up to ${formatCurrency(suggestedDailyAllowance, selectedCurrency)}/day remaining.`,
     };
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs w-full overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-xs w-full overflow-hidden transition-colors">
       {/* Header and Budget Goal Toggle Switch */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4"
-            >
-              <path d="M12 2v20" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+            <TargetIcon className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate">
               Monthly Budget Goal ({currentMonthName})
-            </h2>
-            <p className="text-[11px] sm:text-xs text-slate-500 truncate">
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
               {isBudgetGoalEnabled
-                ? 'Target cap vs actual monthly expenses'
-                : 'Budget tracking is currently turned off'}
+                ? 'Target cap vs actual monthly expenditure'
+                : 'Budget tracking is disabled'}
             </p>
           </div>
         </div>
 
         {/* Feature: Budget Goal Toggle Switch */}
-        <div className="flex items-center justify-between sm:justify-end gap-3 pt-1 sm:pt-0">
-          <label className="flex items-center gap-2 cursor-pointer select-none" title="Toggle Budget Goal on/off">
-            <span className="text-xs font-medium text-slate-600">
-              {isBudgetGoalEnabled ? 'Goal: On' : 'Goal: Off'}
+        <div className="flex items-center justify-between sm:justify-end gap-3">
+          <button
+            type="button"
+            onClick={onToggleBudgetGoal}
+            className="flex items-center gap-2 cursor-pointer select-none"
+            title="Toggle Budget Goal on/off"
+            aria-label={`Toggle budget goal. Currently ${isBudgetGoalEnabled ? 'Enabled' : 'Disabled'}`}
+          >
+            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+              {isBudgetGoalEnabled ? 'Active' : 'Off'}
             </span>
             <div
-              onClick={onToggleBudgetGoal}
-              className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
-                isBudgetGoalEnabled ? 'bg-indigo-600' : 'bg-slate-300'
+              className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${
+                isBudgetGoalEnabled ? 'bg-indigo-600 dark:bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700'
               }`}
             >
               <div
@@ -166,7 +162,7 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
                 }`}
               />
             </div>
-          </label>
+          </button>
 
           {isBudgetGoalEnabled && !isEditing && (
             <button
@@ -175,7 +171,7 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
                 setBudgetValue(monthlyBudget.toString());
                 setIsEditing(true);
               }}
-              className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-indigo-600 px-2.5 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer min-h-[32px]"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer min-h-[36px]"
             >
               <EditIcon className="w-3.5 h-3.5" />
               Edit
@@ -185,56 +181,55 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
       </div>
 
       {!isBudgetGoalEnabled ? (
-        /* Disabled State with one-click enable */
-        <div className="py-6 text-center space-y-2">
-          <div className="text-xs text-slate-500 max-w-sm mx-auto">
-            Monthly Budget Goal is currently disabled. Toggle to set spending limits, progress bars, and over-budget alerts.
+        /* Disabled State */
+        <div className="py-8 text-center space-y-2">
+          <div className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+            Monthly Budget Goal is currently disabled. Toggle to set spending limits, tracking bars, and over-budget warnings.
           </div>
           <button
             type="button"
             onClick={onToggleBudgetGoal}
-            className="px-3.5 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer"
+            className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             Enable Budget Goal
           </button>
         </div>
       ) : isEditing ? (
         /* Editing Form */
-        <form onSubmit={handleSave} className="py-3 space-y-3">
+        <form onSubmit={handleSave} className="py-4 space-y-3.5">
           <div>
-            <label htmlFor="budget-goal-input" className="block text-xs font-semibold text-slate-700 mb-1">
+            <label htmlFor="budget-goal-input" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
               Set Target Monthly Budget
             </label>
-            <div className="relative">
-              <input
-                id="budget-goal-input"
-                type="number"
-                min="1000"
-                step="500"
-                value={budgetValue}
-                onChange={(e) => {
-                  setBudgetValue(e.target.value);
-                  setError(null);
-                }}
-                className="w-full px-3 py-1.5 text-sm rounded-lg border border-slate-300 font-mono tabular-nums focus:border-indigo-600 outline-none"
-                placeholder="e.g. 75000"
-                autoFocus
-              />
-            </div>
-            {error && <p className="text-xs text-rose-600 mt-1">{error}</p>}
+            <input
+              id="budget-goal-input"
+              type="number"
+              min="1"
+              max="1000000000"
+              step="any"
+              value={budgetValue}
+              onChange={(e) => {
+                setBudgetValue(e.target.value);
+                setError(null);
+              }}
+              className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono tabular-nums focus:border-indigo-600 outline-none"
+              placeholder="e.g. 75000"
+              autoFocus
+            />
+            {error && <p className="text-xs text-rose-600 dark:text-rose-400 mt-1">{error}</p>}
           </div>
 
           {/* Quick presets */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] text-slate-400">Presets:</span>
-            {[50000, 75000, 100000, 150000].map((preset) => (
+            <span className="text-xs text-slate-400 dark:text-slate-500">Presets:</span>
+            {[25000, 50000, 75000, 100000, 150000].map((preset) => (
               <button
                 key={preset}
                 type="button"
                 onClick={() => handleQuickPreset(preset)}
-                className="text-[11px] font-mono px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors cursor-pointer"
+                className="text-xs font-mono px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-md transition-colors cursor-pointer"
               >
-                {formatCurrency(preset)}
+                {formatCurrency(preset, selectedCurrency)}
               </button>
             ))}
           </div>
@@ -242,7 +237,7 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
           <div className="flex items-center gap-2 pt-1">
             <button
               type="submit"
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors cursor-pointer"
             >
               <CheckIcon className="w-3.5 h-3.5" />
               Save Goal
@@ -253,7 +248,7 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
                 setIsEditing(false);
                 setError(null);
               }}
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
             >
               <XIcon className="w-3.5 h-3.5" />
               Cancel
@@ -262,33 +257,33 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
         </form>
       ) : (
         /* Visual Progress Section */
-        <div className="pt-3 space-y-4">
+        <div className="pt-4 space-y-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <div>
-              <span className="text-xs text-slate-500">Spent so far: </span>
-              <span className="text-lg font-bold font-mono tabular-nums text-slate-900">
-                {formatCurrency(totalSpent)}
+              <span className="text-xs text-slate-500 dark:text-slate-400">Spent: </span>
+              <span className="text-xl font-bold font-mono tabular-nums text-slate-900 dark:text-white">
+                {formatCurrency(totalSpent, selectedCurrency)}
               </span>
-              <span className="text-xs text-slate-400 font-mono">
-                {' '}of {formatCurrency(monthlyBudget)}
+              <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">
+                {' '}of {formatCurrency(monthlyBudget, selectedCurrency)}
               </span>
             </div>
 
             <div className="text-right">
               {isOverBudget ? (
-                <span className="text-xs font-bold text-rose-600 font-mono tabular-nums">
-                  Over budget by {formatCurrency(Math.abs(remaining))}
+                <span className="text-xs font-bold text-rose-600 dark:text-rose-400 font-mono tabular-nums">
+                  Over budget by {formatCurrency(Math.abs(remaining), selectedCurrency)}
                 </span>
               ) : (
-                <span className="text-xs font-medium text-emerald-700 font-mono tabular-nums">
-                  {formatCurrency(remaining)} remaining ({daysLeft} days left)
+                <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400 font-mono tabular-nums">
+                  {formatCurrency(remaining, selectedCurrency)} remaining ({daysLeft} days left)
                 </span>
               )}
             </div>
           </div>
 
           {/* Progress bar */}
-          <div className="relative h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+          <div className="relative h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
             <div
               className={`h-full ${statusBadge.barClass} transition-all duration-500 rounded-full`}
               style={{ width: `${clampedPercent}%` }}
@@ -299,69 +294,69 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
             />
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-mono">
             <span>0%</span>
-            <span className="font-semibold text-slate-700">
+            <span className="font-semibold text-slate-700 dark:text-slate-300">
               {percentUsed.toFixed(1)}% utilized ({statusBadge.label})
             </span>
             <span>100%</span>
           </div>
 
-          {/* REQUESTED FEATURE: Daily Spending Goal & Pacing */}
-          <div className="mt-3 pt-3 border-t border-slate-100 bg-slate-50/80 rounded-xl p-3 border">
-            <div className="flex items-center justify-between mb-2.5">
+          {/* Daily Spending Goal & Pacing */}
+          <div className="mt-3 pt-3.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 rounded-xl p-3.5 border border-slate-200/60 dark:border-slate-800">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-1.5">
-                <TargetIcon className="w-4 h-4 text-indigo-600" />
-                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                <TargetIcon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
                   Daily Spending Goal & Pacing
                 </span>
               </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${pacingStatus.badgeClass}`}>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${pacingStatus.badgeClass}`}>
                 {pacingStatus.badge}
               </span>
             </div>
 
-            {/* Daily Pacing Stat Breakdown - Responsive grid for 320px+ */}
-            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 text-center mb-2.5">
+            {/* Daily Pacing Stat Breakdown */}
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2.5 text-center mb-3">
               {/* Suggested Remainder Allowance */}
-              <div className="bg-white p-2.5 sm:p-2 rounded-lg border border-slate-200 shadow-2xs min-w-0">
-                <span className="text-[10px] text-slate-400 font-medium block truncate">
+              <div className="bg-white dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/90 dark:border-slate-700 shadow-2xs min-w-0">
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block truncate">
                   Suggested Remainder
                 </span>
                 <span
-                  className={`text-xs sm:text-sm font-bold font-mono tabular-nums block truncate ${
-                    isOverBudget ? 'text-rose-600' : 'text-indigo-600'
+                  className={`text-sm font-bold font-mono tabular-nums block truncate ${
+                    isOverBudget ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400'
                   }`}
                 >
-                  {formatCurrency(suggestedDailyAllowance)}
+                  {formatCurrency(suggestedDailyAllowance, selectedCurrency)}
                 </span>
-                <span className="text-[9px] text-slate-400 block truncate">
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 block truncate">
                   Next {daysRemaining} days
                 </span>
               </div>
 
               {/* Baseline Daily Goal */}
-              <div className="bg-white p-2.5 sm:p-2 rounded-lg border border-slate-200 shadow-2xs min-w-0">
-                <span className="text-[10px] text-slate-400 font-medium block truncate">
+              <div className="bg-white dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/90 dark:border-slate-700 shadow-2xs min-w-0">
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block truncate">
                   Baseline Cap
                 </span>
-                <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-800 block truncate">
-                  {formatCurrency(baselineDailyGoal)}
+                <span className="text-sm font-bold font-mono tabular-nums text-slate-800 dark:text-slate-200 block truncate">
+                  {formatCurrency(baselineDailyGoal, selectedCurrency)}
                 </span>
-                <span className="text-[9px] text-slate-400 block truncate">
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 block truncate">
                   1/{totalDaysInMonth}th / day
                 </span>
               </div>
 
               {/* Spent Today */}
-              <div className="bg-white p-2.5 sm:p-2 rounded-lg border border-slate-200 shadow-2xs min-w-0">
-                <span className="text-[10px] text-slate-400 font-medium block truncate">
+              <div className="bg-white dark:bg-slate-800/80 p-2.5 rounded-lg border border-slate-200/90 dark:border-slate-700 shadow-2xs min-w-0">
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium block truncate">
                   Spent Today
                 </span>
-                <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-800 block truncate">
-                  {formatCurrency(spentToday)}
+                <span className="text-sm font-bold font-mono tabular-nums text-slate-800 dark:text-slate-200 block truncate">
+                  {formatCurrency(spentToday, selectedCurrency)}
                 </span>
-                <span className="text-[9px] text-slate-400 block truncate">
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 block truncate">
                   Day {currentDay} of {totalDaysInMonth}
                 </span>
               </div>
@@ -369,22 +364,22 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
 
             {/* Pacing Timeline Gauge */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                 <span>Month elapsed: {monthElapsedPct.toFixed(0)}% (Day {currentDay})</span>
                 <span>Budget spent: {percentUsed.toFixed(0)}%</span>
               </div>
-              <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden flex">
+              <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden flex">
                 <div
-                  className="bg-indigo-600 h-full rounded-full transition-all duration-500"
-                  style={{ width: `${Math.min(percentUsed, 100)}%` }}
+                  className="bg-indigo-600 dark:bg-indigo-500 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(Math.max(percentUsed, 0), 100)}%` }}
                   title={`Budget used: ${percentUsed.toFixed(1)}%`}
                 />
               </div>
             </div>
 
             {/* Smart Pacing Advisory */}
-            <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-              💡 <span className="text-slate-700 font-medium">{pacingStatus.description}</span>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2.5 leading-relaxed">
+              <span className="font-medium">{pacingStatus.description}</span>
             </p>
           </div>
         </div>

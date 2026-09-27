@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { ExpenseCategory, RecurringExpense, RecurringFrequency } from '../types';
+import { ExpenseCategory, RecurringExpense, RecurringFrequency, CurrencyCode } from '../types';
 import { CATEGORIES } from '../data/sampleExpenses';
-import { formatCurrency, generateId } from '../utils/formatters';
+import { formatCurrency } from '../utils/formatters';
 import {
   RepeatIcon,
   PlusIcon,
   CheckIcon,
   TrashIcon,
   EditIcon,
-  XIcon,
   CategoryIcon,
 } from './Icons';
 
@@ -19,6 +18,7 @@ interface RecurringExpensesCardProps {
   onDeleteRecurring: (id: string) => void;
   onToggleActive: (id: string) => void;
   onLogExpenseNow: (item: RecurringExpense) => void;
+  selectedCurrency?: CurrencyCode;
 }
 
 export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
@@ -28,6 +28,7 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
   onDeleteRecurring,
   onToggleActive,
   onLogExpenseNow,
+  selectedCurrency,
 }) => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -44,10 +45,11 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
   const totalMonthlyCommitment = recurringExpenses
     .filter((r) => r.isActive)
     .reduce((sum, r) => {
-      if (r.frequency === 'Monthly') return sum + r.amount;
-      if (r.frequency === 'Weekly') return sum + r.amount * 4.33;
-      if (r.frequency === 'Yearly') return sum + r.amount / 12;
-      return sum + r.amount;
+      const amt = Number.isFinite(r.amount) ? r.amount : 0;
+      if (r.frequency === 'Monthly') return sum + amt;
+      if (r.frequency === 'Weekly') return sum + amt * 4.33;
+      if (r.frequency === 'Yearly') return sum + amt / 12;
+      return sum + amt;
     }, 0);
 
   const resetForm = () => {
@@ -73,24 +75,30 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
       setError('Title cannot be empty.');
       return;
     }
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      setError('Amount must be greater than 0.');
+    const trimmedAmount = amount.trim();
+    const parsedAmount = Number(trimmedAmount);
+    if (!trimmedAmount || isNaN(parsedAmount) || !Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      setError('Please enter a valid positive amount.');
+      return;
+    }
+    if (parsedAmount > 100000000) {
+      setError('Amount cannot exceed 100,000,000.');
       return;
     }
     const day = parseInt(billingDay, 10);
     if (isNaN(day) || day < 1 || day > 31) {
-      setError('Billing day must be between 1 and 31.');
+      setError('Due day must be between 1 and 31.');
       return;
     }
 
     const payload = {
-      title: title.trim(),
-      amount: parsedAmount,
+      title: trimmedTitle,
+      amount: Math.round(parsedAmount * 100) / 100,
       category,
       frequency,
       billingDay: day,
@@ -102,117 +110,104 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
     } else {
       onAddRecurring(payload);
     }
+
     resetForm();
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs w-full overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-5 sm:p-6 shadow-xs w-full transition-colors">
       {/* Header and Summary */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
             <RepeatIcon className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
-                Recurring Expenses & Subscriptions
-              </h2>
-              <span className="text-[10px] sm:text-[11px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-md">
-                {recurringExpenses.filter((r) => r.isActive).length} Active
-              </span>
-            </div>
-            <p className="text-[11px] sm:text-xs text-slate-500">
-              Fixed commitments · Projected: {' '}
-              <span className="font-mono font-bold text-slate-800">
-                {formatCurrency(totalMonthlyCommitment)}/mo
-              </span>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+              Recurring Subscriptions & Bills
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Manage fixed recurring commitments ({recurringExpenses.filter((r) => r.isActive).length} active)
             </p>
           </div>
         </div>
 
-        {!isFormOpen && (
-          <button
-            type="button"
-            onClick={() => {
-              resetForm();
-              setIsFormOpen(true);
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer self-start sm:self-auto min-h-[36px]"
-          >
-            <PlusIcon className="w-3.5 h-3.5" />
-            <span>Add Recurring</span>
-          </button>
-        )}
-      </div>
-
-      {/* Add / Edit Form Modal/Drawer */}
-      {isFormOpen && (
-        <form onSubmit={handleSubmit} className="p-4 my-3 bg-slate-50/80 rounded-xl border border-slate-200 space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200/60">
-            <h3 className="text-xs font-semibold text-slate-800">
-              {editingId ? 'Edit Recurring Expense' : 'Add New Recurring Expense'}
-            </h3>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="text-slate-400 hover:text-slate-600 p-0.5"
-            >
-              <XIcon className="w-4 h-4" />
-            </button>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <span className="text-[10px] uppercase font-semibold text-slate-400 dark:text-slate-500 block">
+              Projected Monthly Cost
+            </span>
+            <span className="text-sm sm:text-base font-bold font-mono tabular-nums text-slate-900 dark:text-white">
+              {formatCurrency(totalMonthlyCommitment, selectedCurrency)}
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {!isFormOpen && (
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer min-h-[38px]"
+            >
+              <PlusIcon className="w-3.5 h-3.5" />
+              <span>Add Recurring</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Inline Form */}
+      {isFormOpen && (
+        <form onSubmit={handleSubmit} className="my-4 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/60 bg-indigo-50/30 dark:bg-indigo-950/30 space-y-3.5">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">
+            {editingId ? 'Edit Recurring Item' : 'New Recurring Commitment'}
+          </h4>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-              <label htmlFor="rec-title" className="block text-xs font-medium text-slate-700 mb-1">
-                Title / Subscription Name *
+              <label htmlFor="rec-title" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Title
               </label>
               <input
                 id="rec-title"
                 type="text"
-                placeholder="e.g. House Rent, PTCL Broadband, Gym"
                 value={title}
                 onChange={(e) => {
                   setTitle(e.target.value);
                   setError(null);
                 }}
-                className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white outline-none focus:border-indigo-600"
+                placeholder="e.g. Apartment Rent, Netflix"
+                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-indigo-600"
               />
             </div>
 
             <div>
-              <label htmlFor="rec-amount" className="block text-xs font-medium text-slate-700 mb-1">
-                Amount (Rs) *
+              <label htmlFor="rec-amount" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Amount
               </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-mono font-semibold">
-                  Rs
-                </span>
-                <input
-                  id="rec-amount"
-                  type="number"
-                  min="1"
-                  step="any"
-                  placeholder="e.g. 15000"
-                  value={amount}
-                  onChange={(e) => {
-                    setAmount(e.target.value);
-                    setError(null);
-                  }}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white font-mono outline-none focus:border-indigo-600"
-                />
-              </div>
+              <input
+                id="rec-amount"
+                type="number"
+                step="any"
+                min="1"
+                value={amount}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  setError(null);
+                }}
+                placeholder="2500"
+                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono outline-none focus:border-indigo-600"
+              />
             </div>
 
             <div>
-              <label htmlFor="rec-category" className="block text-xs font-medium text-slate-700 mb-1">
+              <label htmlFor="rec-category" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                 Category
               </label>
               <select
                 id="rec-category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-                className="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-300 bg-white outline-none focus:border-indigo-600"
+                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-indigo-600"
               >
                 {CATEGORIES.map((c) => (
                   <option key={c} value={c}>
@@ -224,14 +219,14 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label htmlFor="rec-freq" className="block text-xs font-medium text-slate-700 mb-1">
+                <label htmlFor="rec-freq" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Frequency
                 </label>
                 <select
                   id="rec-freq"
                   value={frequency}
                   onChange={(e) => setFrequency(e.target.value as RecurringFrequency)}
-                  className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-300 bg-white outline-none focus:border-indigo-600"
+                  className="w-full px-2 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-indigo-600"
                 >
                   <option value="Monthly">Monthly</option>
                   <option value="Weekly">Weekly</option>
@@ -240,7 +235,7 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
               </div>
 
               <div>
-                <label htmlFor="rec-day" className="block text-xs font-medium text-slate-700 mb-1">
+                <label htmlFor="rec-day" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                   Due Day
                 </label>
                 <input
@@ -250,27 +245,27 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
                   max="31"
                   value={billingDay}
                   onChange={(e) => setBillingDay(e.target.value)}
-                  className="w-full px-2 py-1.5 text-xs rounded-lg border border-slate-300 bg-white outline-none focus:border-indigo-600 font-mono"
+                  className="w-full px-2 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:border-indigo-600 font-mono"
                   placeholder="Day 1"
                 />
               </div>
             </div>
           </div>
 
-          {error && <p className="text-xs text-rose-600 font-medium">{error}</p>}
+          {error && <p className="text-xs text-rose-600 dark:text-rose-400 font-medium">{error}</p>}
 
           <div className="flex items-center gap-2 pt-1">
             <button
               type="submit"
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors cursor-pointer shadow-xs"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors cursor-pointer shadow-xs"
             >
               <CheckIcon className="w-3.5 h-3.5" />
-              <span>{editingId ? 'Save Changes' : 'Save Recurring Expense'}</span>
+              <span>{editingId ? 'Save Changes' : 'Save Recurring Item'}</span>
             </button>
             <button
               type="button"
               onClick={resetForm}
-              className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+              className="px-3.5 py-2 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -280,72 +275,74 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
 
       {/* List of Recurring Expenses */}
       {recurringExpenses.length === 0 ? (
-        <div className="py-6 text-center text-slate-400 text-xs">
+        <div className="py-8 text-center text-slate-400 dark:text-slate-500 text-xs">
           No recurring expenses set up yet. Add rent, broadband, or bills above.
         </div>
       ) : (
-        <div className="divide-y divide-slate-100 mt-2">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800 mt-2">
           {recurringExpenses.map((item) => (
             <div
               key={item.id}
-              className={`py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 transition-colors ${
+              className={`py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors ${
                 !item.isActive ? 'opacity-50' : ''
               }`}
             >
-              <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+              <div className="flex items-start sm:items-center gap-3 min-w-0">
                 <button
                   type="button"
                   onClick={() => onToggleActive(item.id)}
                   title={item.isActive ? 'Pause recurring' : 'Activate recurring'}
+                  aria-label={item.isActive ? `Pause recurring ${item.title}` : `Activate recurring ${item.title}`}
                   className={`mt-0.5 sm:mt-0 w-4 h-4 rounded-full border flex items-center justify-center cursor-pointer transition-colors ${
                     item.isActive
                       ? 'bg-emerald-500 border-emerald-600 text-white'
-                      : 'border-slate-300 hover:border-slate-400'
+                      : 'border-slate-300 dark:border-slate-600 hover:border-slate-400'
                   }`}
                 >
                   {item.isActive && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
                 </button>
 
                 <div>
-                  <div className="text-xs font-semibold text-slate-900 flex items-center gap-2">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                     <span className="truncate">{item.title}</span>
-                    <span className="text-[10px] text-slate-400 font-normal">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-normal">
                       ({item.frequency})
                     </span>
                   </div>
-                  <div className="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
-                    <span className="inline-flex items-center gap-1 text-slate-600">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                    <span className="inline-flex items-center gap-1 text-slate-600 dark:text-slate-400">
                       <CategoryIcon category={item.category} className="w-3 h-3 text-slate-400" />
                       {item.category}
                     </span>
-                    <span aria-hidden="true">·</span>
+                    <span aria-hidden="true" className="text-slate-300 dark:text-slate-600">·</span>
                     <span>Due Day {item.billingDay} of month</span>
                   </div>
                 </div>
               </div>
 
               {/* Amount and Actions */}
-              <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pl-6 sm:pl-0">
-                <div className="font-mono tabular-nums font-bold text-slate-900 text-sm">
-                  {formatCurrency(item.amount)}
+              <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pl-7 sm:pl-0">
+                <div className="font-mono tabular-nums font-bold text-slate-900 dark:text-white text-sm sm:text-base">
+                  {formatCurrency(item.amount, selectedCurrency)}
                 </div>
 
-                <div className="flex items-center gap-1">
-                  {/* One-click Log to Expenses Button */}
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
                     onClick={() => onLogExpenseNow(item)}
                     title="Log this expense into current month's expenses ledger now"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-md transition-colors cursor-pointer"
+                    aria-label={`Log ${item.title} to ledger now`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 rounded-md transition-colors cursor-pointer min-h-[32px]"
                   >
-                    <span>+ Log Now</span>
+                    <span>+ Log to Ledger</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleStartEdit(item)}
-                    className="p-1 text-slate-400 hover:text-indigo-600 rounded-md transition-colors cursor-pointer"
-                    title="Edit"
+                    className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
+                    title="Edit recurring item"
+                    aria-label={`Edit recurring item ${item.title}`}
                   >
                     <EditIcon className="w-3.5 h-3.5" />
                   </button>
@@ -353,8 +350,9 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
                   <button
                     type="button"
                     onClick={() => onDeleteRecurring(item.id)}
-                    className="p-1 text-slate-400 hover:text-rose-600 rounded-md transition-colors cursor-pointer"
-                    title="Delete"
+                    className="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded-md transition-colors cursor-pointer min-h-[32px] min-w-[32px] flex items-center justify-center"
+                    title="Delete recurring item"
+                    aria-label={`Delete recurring item ${item.title}`}
                   >
                     <TrashIcon className="w-3.5 h-3.5" />
                   </button>

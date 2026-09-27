@@ -1,19 +1,21 @@
 import React from 'react';
-import { Expense, ExpenseCategory } from '../types';
+import { Expense, ExpenseCategory, CurrencyCode } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { WalletIcon, ReceiptIcon, ArrowTrendingUpIcon, CategoryIcon } from './Icons';
 import { CATEGORIES, CATEGORY_COLORS } from '../data/sampleExpenses';
 
 interface SummaryCardsProps {
   expenses: Expense[];
+  selectedCurrency?: CurrencyCode;
 }
 
-export const SummaryCards: React.FC<SummaryCardsProps> = ({ expenses }) => {
-  const totalAmount = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+export const SummaryCards: React.FC<SummaryCardsProps> = ({ expenses, selectedCurrency }) => {
+  const totalAmount = expenses.reduce((sum, exp) => sum + (Number.isFinite(exp.amount) ? exp.amount : 0), 0);
   const totalCount = expenses.length;
 
-  const highestExpense = expenses.length > 0
-    ? expenses.reduce((max, exp) => (exp.amount > max.amount ? exp : max), expenses[0])
+  const validExpenses = expenses.filter((exp) => Number.isFinite(exp.amount) && exp.amount >= 0);
+  const highestExpense = validExpenses.length > 0
+    ? validExpenses.reduce((max, exp) => (exp.amount > max.amount ? exp : max), validExpenses[0])
     : null;
 
   const averageExpense = totalCount > 0 ? totalAmount / totalCount : 0;
@@ -22,99 +24,109 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ expenses }) => {
   const categoryTotals = CATEGORIES.reduce((acc, cat) => {
     acc[cat] = expenses
       .filter((e) => e.category === cat)
-      .reduce((sum, e) => sum + e.amount, 0);
+      .reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
     return acc;
   }, {} as Record<ExpenseCategory, number>);
 
   return (
-    <div className="space-y-4 w-full overflow-hidden">
-      {/* 3-4 Primary Visual Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* Total Expenses Card */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs transition-shadow hover:shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">
-              Total Expenses
-            </span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-              <WalletIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+    <div className="space-y-4 w-full">
+      {/* 4 Core Financial Summary Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+        {/* 1. Total Expenses Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Total Expenses
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <WalletIcon className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-mono tabular-nums truncate">
+              {formatCurrency(totalAmount, selectedCurrency)}
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-mono tabular-nums truncate">
-            {formatCurrency(totalAmount)}
-          </div>
-          <p className="text-xs text-slate-500 mt-1 truncate">
-            Across {totalCount} {totalCount === 1 ? 'logged transaction' : 'logged transactions'}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 truncate">
+            {totalCount} {totalCount === 1 ? 'transaction recorded' : 'transactions recorded'}
           </p>
         </div>
 
-        {/* Number of Expenses Card */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs transition-shadow hover:shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">
-              Number of Expenses
-            </span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
-              <ReceiptIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        {/* 2. Number of Expenses Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Logged Expenses
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+                <ReceiptIcon className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-mono tabular-nums truncate">
+              {totalCount}
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-mono tabular-nums truncate">
-            {totalCount}
-          </div>
-          <p className="text-xs text-slate-500 mt-1 truncate">
-            {totalCount > 0 ? `Avg: ${formatCurrency(averageExpense)} / item` : 'No items recorded yet'}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 truncate">
+            {totalCount > 0 ? `Avg ${formatCurrency(averageExpense, selectedCurrency)} per entry` : 'No transactions logged'}
           </p>
         </div>
 
-        {/* Highest Expense Card */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs transition-shadow hover:shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">
-              Highest Expense
-            </span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-              <ArrowTrendingUpIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        {/* 3. Highest Expense Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Highest Expense
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <ArrowTrendingUpIcon className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-mono tabular-nums truncate">
+              {highestExpense ? formatCurrency(highestExpense.amount, selectedCurrency) : formatCurrency(0, selectedCurrency)}
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-mono tabular-nums truncate">
-            {highestExpense ? formatCurrency(highestExpense.amount) : 'Rs 0'}
-          </div>
-          <p className="text-xs text-slate-500 mt-1 truncate" title={highestExpense ? highestExpense.title : 'None'}>
-            {highestExpense ? `${highestExpense.title} (${highestExpense.category})` : 'No expenses recorded'}
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 truncate" title={highestExpense ? `${highestExpense.title} (${highestExpense.category})` : 'None'}>
+            {highestExpense ? `${highestExpense.title} · ${highestExpense.category}` : 'No recorded items'}
           </p>
         </div>
 
-        {/* Average Transaction Card */}
-        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs transition-shadow hover:shadow-sm">
-          <div className="flex items-center justify-between text-slate-500 mb-2">
-            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 truncate">
-              Average Expense
-            </span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-              <CategoryIcon category="Other" className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+        {/* 4. Average Expense Card */}
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-5 shadow-xs transition-all hover:border-slate-300 dark:hover:border-slate-700 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Average Expense
+              </span>
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0">
+                <CategoryIcon category="Other" className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white font-mono tabular-nums truncate">
+              {formatCurrency(averageExpense, selectedCurrency)}
             </div>
           </div>
-          <div className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 font-mono tabular-nums truncate">
-            {formatCurrency(averageExpense)}
-          </div>
-          <p className="text-xs text-slate-500 mt-1 truncate">
-            Per tracked expense item
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 truncate">
+            Across active tracked period
           </p>
         </div>
       </div>
 
       {/* Visual Category Breakdown Distribution Bar */}
       {totalAmount > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-4 shadow-xs">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-slate-700">Category Spending Distribution</span>
-            <span className="text-[11px] sm:text-xs text-slate-500 font-mono tabular-nums">
-              100% of tracked funds
+        <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-2.5">
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Category Distribution
+            </span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono tabular-nums">
+              100% of tracked spending
             </span>
           </div>
 
           {/* Segmented Progress Bar */}
-          <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
+          <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex">
             {CATEGORIES.map((cat) => {
               const amount = categoryTotals[cat] || 0;
               const pct = totalAmount > 0 ? (amount / totalAmount) * 100 : 0;
@@ -123,26 +135,26 @@ export const SummaryCards: React.FC<SummaryCardsProps> = ({ expenses }) => {
                 <div
                   key={cat}
                   style={{ width: `${pct}%` }}
-                  title={`${cat}: ${formatCurrency(amount)} (${pct.toFixed(1)}%)`}
+                  title={`${cat}: ${formatCurrency(amount, selectedCurrency)} (${pct.toFixed(1)}%)`}
                   className={`${CATEGORY_COLORS[cat].bar} transition-all duration-300`}
                 />
               );
             })}
           </div>
 
-          {/* Unboxed Metadata Legend */}
-          <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1.5 mt-3 text-[11px] sm:text-xs text-slate-600">
+          {/* Clean Unboxed Metadata Legend */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-3 text-xs text-slate-600 dark:text-slate-400">
             {CATEGORIES.map((cat) => {
               const amount = categoryTotals[cat] || 0;
               const pct = totalAmount > 0 ? (amount / totalAmount) * 100 : 0;
               if (amount === 0) return null;
               return (
-                <div key={cat} className="flex items-center gap-1 sm:gap-1.5">
-                  <span className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-xs ${CATEGORY_COLORS[cat].bar} inline-block shrink-0`} />
-                  <span className="font-medium text-slate-700">{cat}</span>
-                  <span className="text-slate-400">·</span>
-                  <span className="font-mono tabular-nums text-slate-600 font-semibold">{formatCurrency(amount)}</span>
-                  <span className="text-slate-400">({pct.toFixed(0)}%)</span>
+                <div key={cat} className="flex items-center gap-1.5">
+                  <span className={`w-2.5 h-2.5 rounded-xs ${CATEGORY_COLORS[cat].bar} inline-block shrink-0`} />
+                  <span className="font-medium text-slate-700 dark:text-slate-300">{cat}</span>
+                  <span className="text-slate-300 dark:text-slate-600">·</span>
+                  <span className="font-mono tabular-nums text-slate-800 dark:text-slate-200 font-semibold">{formatCurrency(amount, selectedCurrency)}</span>
+                  <span className="text-slate-400 dark:text-slate-500">({pct.toFixed(0)}%)</span>
                 </div>
               );
             })}

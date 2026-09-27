@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Expense } from '../types';
+import { Expense, CurrencyCode } from '../types';
 import { formatCurrency } from '../utils/formatters';
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, DownloadIcon } from './Icons';
 
@@ -8,6 +8,7 @@ interface MonthlyViewBarProps {
   selectedMonth: string; // 'YYYY-MM' or 'all'
   onSelectMonth: (month: string) => void;
   onExportMonthlyCSV?: () => void;
+  selectedCurrency?: CurrencyCode;
 }
 
 export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
@@ -15,6 +16,7 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
   selectedMonth,
   onSelectMonth,
   onExportMonthlyCSV,
+  selectedCurrency,
 }) => {
   // Extract all distinct months (YYYY-MM) present in expenses, plus current month
   const availableMonths = useMemo(() => {
@@ -50,7 +52,7 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
   // Selected Month metrics
   const monthMetrics = useMemo(() => {
     if (selectedMonth === 'all') {
-      const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+      const total = expenses.reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
       return {
         total,
         count: expenses.length,
@@ -59,19 +61,19 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
       };
     }
 
-    const currentMonthExpenses = expenses.filter((e) => e.date.startsWith(selectedMonth));
-    const total = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const currentMonthExpenses = expenses.filter((e) => e.date && e.date.startsWith(selectedMonth));
+    const total = currentMonthExpenses.reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
 
     // Calculate days in selected month
     const [year, month] = selectedMonth.split('-').map(Number);
-    const daysInMonth = new Date(year, month, 0).getDate();
+    const daysInMonth = (year && month) ? new Date(year, month, 0).getDate() : 30;
     const dailyAverage = total / daysInMonth;
 
     // Previous month comparison
     const prevMonthDate = new Date(year, month - 2, 1);
     const prevMonthStr = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
-    const prevMonthExpenses = expenses.filter((e) => e.date.startsWith(prevMonthStr));
-    const prevTotal = prevMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const prevMonthExpenses = expenses.filter((e) => e.date && e.date.startsWith(prevMonthStr));
+    const prevTotal = prevMonthExpenses.reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
 
     let momChange: { percent: number; label: string; isIncrease: boolean } | null = null;
     if (prevTotal > 0) {
@@ -102,7 +104,6 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
     if (idx !== -1 && idx < availableMonths.length - 1) {
       onSelectMonth(availableMonths[idx + 1]);
     } else {
-      // Step 1 month back mathematically
       const [year, month] = selectedMonth.split('-').map(Number);
       const prevDate = new Date(year, month - 2, 1);
       const prevStr = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
@@ -116,7 +117,6 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
     if (idx > 0) {
       onSelectMonth(availableMonths[idx - 1]);
     } else {
-      // Step 1 month forward mathematically
       const [year, month] = selectedMonth.split('-').map(Number);
       const nextDate = new Date(year, month, 1);
       const nextStr = `${nextDate.getFullYear()}-${String(nextDate.getMonth() + 1).padStart(2, '0')}`;
@@ -125,11 +125,11 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-3 sm:p-4 shadow-xs w-full overflow-hidden">
+    <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200/90 dark:border-slate-800 p-3 sm:p-4 shadow-xs w-full overflow-hidden transition-colors">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         {/* Left: Month Navigator & Title */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
             <CalendarIcon className="w-4 h-4" />
           </div>
 
@@ -139,7 +139,7 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
               onClick={handlePrevMonth}
               title="Previous Month"
               aria-label="Previous Month"
-              className="p-2 sm:p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer min-h-[38px] min-w-[38px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center"
+              className="p-2 sm:p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer min-h-[38px] min-w-[38px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center"
             >
               <ChevronLeftIcon className="w-3.5 h-3.5" />
             </button>
@@ -148,7 +148,7 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
               value={selectedMonth}
               onChange={(e) => onSelectMonth(e.target.value)}
               aria-label="Select month view"
-              className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg outline-none cursor-pointer focus:border-indigo-600 max-w-[135px] xs:max-w-[190px] sm:max-w-none truncate min-h-[38px] sm:min-h-[36px]"
+              className="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-lg outline-none cursor-pointer focus:border-indigo-600 dark:focus:border-indigo-500 max-w-[145px] xs:max-w-[200px] sm:max-w-none truncate min-h-[38px] sm:min-h-[36px]"
             >
               <option value="all">📅 All Months (Lifetime)</option>
               {availableMonths.map((m) => (
@@ -163,7 +163,7 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
               onClick={handleNextMonth}
               title="Next Month"
               aria-label="Next Month"
-              className="p-2 sm:p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer min-h-[38px] min-w-[38px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center"
+              className="p-2 sm:p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors cursor-pointer min-h-[38px] min-w-[38px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center"
             >
               <ChevronRightIcon className="w-3.5 h-3.5" />
             </button>
@@ -173,7 +173,7 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
             <button
               type="button"
               onClick={() => onSelectMonth('all')}
-              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded-md hover:bg-indigo-50 transition-colors cursor-pointer min-h-[36px] inline-flex items-center"
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium px-2 py-1 rounded-md hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors cursor-pointer min-h-[36px] inline-flex items-center"
             >
               View All
             </button>
@@ -184,53 +184,53 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
               type="button"
               onClick={onExportMonthlyCSV}
               title={`Download structured CSV report for ${formatMonthLabel(selectedMonth)}`}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-md shadow-2xs transition-colors cursor-pointer min-h-[36px]"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 rounded-md shadow-2xs transition-colors cursor-pointer min-h-[36px]"
             >
-              <DownloadIcon className="w-3 h-3 text-slate-500" />
+              <DownloadIcon className="w-3 h-3 text-slate-500 dark:text-slate-400" />
               <span>Monthly CSV</span>
             </button>
           )}
         </div>
 
         {/* Right: Quick Month Statistics Banner */}
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-4 text-xs w-full md:w-auto">
-          <div className="bg-slate-50 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200/80">
-            <span className="text-slate-400 block text-[10px] uppercase font-semibold truncate">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-3 text-xs w-full md:w-auto">
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800">
+            <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-semibold truncate">
               {selectedMonth === 'all' ? 'Lifetime Total' : `${formatMonthLabel(selectedMonth)} Total`}
             </span>
-            <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-900 truncate block">
-              {formatCurrency(monthMetrics.total)}
+            <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-900 dark:text-white truncate block">
+              {formatCurrency(monthMetrics.total, selectedCurrency)}
             </span>
           </div>
 
-          <div className="bg-slate-50 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200/80">
-            <span className="text-slate-400 block text-[10px] uppercase font-semibold truncate">
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800">
+            <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-semibold truncate">
               Logged Items
             </span>
-            <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-800 truncate block">
-              {monthMetrics.count} transactions
+            <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-800 dark:text-slate-200 truncate block">
+              {monthMetrics.count} entries
             </span>
           </div>
 
           {monthMetrics.dailyAverage !== null && (
-            <div className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/80 hidden sm:block">
-              <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+            <div className="bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 hidden sm:block">
+              <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-semibold">
                 Daily Average
               </span>
-              <span className="text-sm font-bold font-mono tabular-nums text-slate-800">
-                {formatCurrency(monthMetrics.dailyAverage)}
+              <span className="text-sm font-bold font-mono tabular-nums text-slate-800 dark:text-slate-200">
+                {formatCurrency(monthMetrics.dailyAverage, selectedCurrency)}
               </span>
             </div>
           )}
 
           {monthMetrics.momChange && (
-            <div className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/80 hidden md:block">
-              <span className="text-slate-400 block text-[10px] uppercase font-semibold">
-                MoM Comparison
+            <div className="bg-slate-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-lg border border-slate-200/80 dark:border-slate-800 hidden md:block">
+              <span className="text-slate-400 dark:text-slate-500 block text-[10px] uppercase font-semibold">
+                MoM Variance
               </span>
               <span
                 className={`text-xs font-semibold font-mono tabular-nums ${
-                  monthMetrics.momChange.isIncrease ? 'text-amber-700' : 'text-emerald-700'
+                  monthMetrics.momChange.isIncrease ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'
                 }`}
               >
                 {monthMetrics.momChange.label}

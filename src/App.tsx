@@ -22,23 +22,61 @@ const LOCAL_STORAGE_KEY = 'personal_expense_tracker_data_pkr_v2';
 const BUDGET_STORAGE_KEY = 'personal_budget_goal_pkr_v2';
 const BUDGET_ENABLED_STORAGE_KEY = 'personal_budget_goal_enabled_v1';
 const RECURRING_STORAGE_KEY = 'personal_recurring_expenses_pkr_v2';
+const THEME_STORAGE_KEY = 'personal_expense_tracker_theme_v1';
 const DEFAULT_MONTHLY_BUDGET = 75000;
 
 export default function App() {
   const getTodayString = () => new Date().toISOString().split('T')[0];
   const getCurrentMonthString = () => getTodayString().slice(0, 7);
 
+  // Theme state (Dark / Light Mode)
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      if (stored !== null) {
+        return stored === 'dark';
+      }
+      return typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch {
+      return false;
+    }
+  });
+
+  // Apply dark mode class to html document element
+  useEffect(() => {
+    try {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem(THEME_STORAGE_KEY, 'light');
+      }
+    } catch (err) {
+      console.error('Failed to sync theme to localStorage:', err);
+    }
+  }, [isDark]);
+
   // 1. All Expenses state
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored) {
+      if (stored !== null) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const hasTinyAmounts = parsed.some((e: Expense) => e.amount < 300);
-          if (!hasTinyAmounts) {
-            return parsed;
-          }
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter((item) => item && typeof item === 'object')
+            .map((item): Expense => {
+              const validAmt = Number(item.amount);
+              return {
+                id: typeof item.id === 'string' && item.id ? item.id : generateId(),
+                title: typeof item.title === 'string' ? item.title.trim() : 'Expense',
+                amount: !isNaN(validAmt) && Number.isFinite(validAmt) && validAmt >= 0 ? Math.round(validAmt * 100) / 100 : 0,
+                category: typeof item.category === 'string' && item.category ? item.category : 'Other',
+                date: typeof item.date === 'string' && item.date ? item.date : getTodayString(),
+                createdAt: typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) ? item.createdAt : Date.now(),
+              };
+            });
         }
       }
     } catch (err) {
@@ -51,10 +89,10 @@ export default function App() {
   const [monthlyBudget, setMonthlyBudget] = useState<number>(() => {
     try {
       const stored = localStorage.getItem(BUDGET_STORAGE_KEY);
-      if (stored) {
+      if (stored !== null) {
         const val = parseFloat(stored);
-        if (!isNaN(val) && val > 0) {
-          return val;
+        if (!isNaN(val) && Number.isFinite(val) && val > 0 && val <= 1000000000) {
+          return Math.round(val * 100) / 100;
         }
       }
     } catch (err) {
@@ -86,10 +124,25 @@ export default function App() {
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>(() => {
     try {
       const stored = localStorage.getItem(RECURRING_STORAGE_KEY);
-      if (stored) {
+      if (stored !== null) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter((item) => item && typeof item === 'object')
+            .map((item): RecurringExpense => {
+              const validAmt = Number(item.amount);
+              const validDay = parseInt(item.billingDay, 10);
+              return {
+                id: typeof item.id === 'string' && item.id ? item.id : generateId(),
+                title: typeof item.title === 'string' ? item.title.trim() : 'Subscription',
+                amount: !isNaN(validAmt) && Number.isFinite(validAmt) && validAmt >= 0 ? Math.round(validAmt * 100) / 100 : 0,
+                category: typeof item.category === 'string' && item.category ? item.category : 'Bills',
+                frequency: ['Monthly', 'Weekly', 'Yearly'].includes(item.frequency) ? item.frequency : 'Monthly',
+                billingDay: !isNaN(validDay) && validDay >= 1 && validDay <= 31 ? validDay : 1,
+                isActive: typeof item.isActive === 'boolean' ? item.isActive : true,
+                createdAt: typeof item.createdAt === 'number' && Number.isFinite(item.createdAt) ? item.createdAt : Date.now(),
+              };
+            });
         }
       }
     } catch (err) {
@@ -173,7 +226,7 @@ export default function App() {
     const targetKey = selectedMonth === 'all' ? getCurrentMonthString() : selectedMonth;
     return expenses
       .filter((e) => e.date && e.date.startsWith(targetKey))
-      .reduce((sum, e) => sum + e.amount, 0);
+      .reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
   }, [expenses, selectedMonth]);
 
   // Add Expense handler
@@ -190,23 +243,22 @@ export default function App() {
       setSelectedMonth(newMonth);
     }
 
-    // Budget alert on addition if budget goal is enabled
     if (isBudgetGoalEnabled) {
       const targetMonthKey = newMonth;
       const existingMonthTotal = expenses
         .filter((e) => e.date && e.date.startsWith(targetMonthKey))
-        .reduce((sum, e) => sum + e.amount, 0);
+        .reduce((sum, e) => sum + (Number.isFinite(e.amount) ? e.amount : 0), 0);
       const newMonthTotal = existingMonthTotal + newExpense.amount;
 
       if (newMonthTotal > monthlyBudget) {
-        showToast(`🚨 Budget Alert: Exceeded your ${formatCurrency(monthlyBudget, selectedCurrency)} budget!`);
+        showToast(`Budget Alert: Exceeded your ${formatCurrency(monthlyBudget, selectedCurrency)} budget.`);
       } else if (newMonthTotal >= 0.8 * monthlyBudget) {
-        showToast(`⚠️ Caution: Reached ${((newMonthTotal / monthlyBudget) * 100).toFixed(0)}% of monthly budget.`);
+        showToast(`Caution: Reached ${((newMonthTotal / monthlyBudget) * 100).toFixed(0)}% of monthly budget.`);
       } else {
-        showToast(`Added "${newExpense.title}" successfully!`);
+        showToast(`Added "${newExpense.title}" successfully.`);
       }
     } else {
-      showToast(`Added "${newExpense.title}" successfully!`);
+      showToast(`Added "${newExpense.title}" successfully.`);
     }
   };
 
@@ -216,7 +268,7 @@ export default function App() {
       prev.map((item) => (item.id === id ? { ...item, ...updatedData } : item))
     );
     setEditingExpense(null);
-    showToast(`Updated "${updatedData.title}" successfully!`);
+    showToast(`Updated "${updatedData.title}".`);
   };
 
   // Delete Expense handler
@@ -236,7 +288,7 @@ export default function App() {
   // Budget Goal Update handler
   const handleUpdateBudget = (newBudget: number) => {
     setMonthlyBudget(newBudget);
-    showToast(`Monthly budget goal updated to ${formatCurrency(newBudget, selectedCurrency)}!`);
+    showToast(`Monthly budget goal updated to ${formatCurrency(newBudget, selectedCurrency)}.`);
   };
 
   // Recurring Expenses Handlers
@@ -247,14 +299,14 @@ export default function App() {
       createdAt: Date.now(),
     };
     setRecurringExpenses((prev) => [newRec, ...prev]);
-    showToast(`Added recurring expense "${newRec.title}"!`);
+    showToast(`Added recurring expense "${newRec.title}".`);
   };
 
   const handleUpdateRecurring = (id: string, item: Omit<RecurringExpense, 'id' | 'createdAt'>) => {
     setRecurringExpenses((prev) =>
       prev.map((r) => (r.id === id ? { ...r, ...item } : r))
     );
-    showToast('Updated recurring expense successfully.');
+    showToast('Updated recurring expense.');
   };
 
   const handleDeleteRecurring = (id: string) => {
@@ -294,8 +346,9 @@ export default function App() {
     setIsBudgetGoalEnabled(true);
     setSelectedMonth(getCurrentMonthString());
     setEditingExpense(null);
+    setExpenseToDelete(null);
     setActiveCategory('All');
-    showToast('Reset to default sample expenses & recurring items.');
+    showToast('Reset to default sample expenses.');
   };
 
   // Export to CSV
@@ -310,11 +363,11 @@ export default function App() {
     if (displayedExpenses.length === 0) return;
     const monthLabel = selectedMonth === 'all' ? 'All Months (Lifetime)' : selectedMonth;
     exportMonthlyCSVReport(displayedExpenses, monthLabel, monthlyBudget, selectedCurrency);
-    showToast(`Exported monthly CSV report for ${monthLabel}!`);
+    showToast(`Exported monthly CSV report for ${monthLabel}.`);
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col selection:bg-indigo-100 dark:selection:bg-indigo-900/60 selection:text-indigo-900 dark:selection:text-indigo-200 transition-colors">
       {/* Top Bar Navigation */}
       <Navbar
         onExportCSV={handleExportCSV}
@@ -323,11 +376,13 @@ export default function App() {
         hasExpenses={displayedExpenses.length > 0}
         selectedCurrency={selectedCurrency}
         onOpenCurrencySelector={() => setIsCurrencyModalOpen(true)}
+        isDark={isDark}
+        onToggleTheme={() => setIsDark(!isDark)}
       />
 
       {/* Toast Feedback Notification */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-lg shadow-lg text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-200 no-print">
+        <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-4 py-3 rounded-xl shadow-xl text-xs font-semibold animate-in fade-in slide-in-from-bottom-2 duration-200 no-print">
           <div className="w-4 h-4 rounded-full bg-emerald-500 text-slate-900 flex items-center justify-center font-bold">
             <CheckIcon className="w-2.5 h-2.5 text-white" />
           </div>
@@ -336,60 +391,61 @@ export default function App() {
       )}
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-2.5 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 space-y-6 sm:space-y-8">
         {/* Navigation Tabs for Dashboard vs Recurring Subscriptions */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-200 pb-3 no-print">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/90 dark:border-slate-800 pb-3.5 no-print">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setActiveMainTab('dashboard')}
-              className={`flex items-center gap-2 px-3.5 py-2 sm:py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer min-h-[38px] ${
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer min-h-[38px] ${
                 activeMainTab === 'dashboard'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                  ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
               }`}
             >
               <ReceiptIcon className="w-3.5 h-3.5" />
-              <span>Expenses & Analytics</span>
+              <span>Dashboard & Ledger</span>
             </button>
 
             <button
               type="button"
               onClick={() => setActiveMainTab('recurring')}
-              className={`flex items-center gap-2 px-3.5 py-2 sm:py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer min-h-[38px] ${
+              className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer min-h-[38px] ${
                 activeMainTab === 'recurring'
-                  ? 'bg-slate-900 text-white shadow-xs'
-                  : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
+                  ? 'bg-slate-900 dark:bg-indigo-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800'
               }`}
             >
               <RepeatIcon className="w-3.5 h-3.5" />
-              <span>Recurring Expenses</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-sm bg-indigo-100 text-indigo-700">
+              <span>Recurring Subscriptions</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-sm bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300">
                 {recurringExpenses.filter((r) => r.isActive).length}
               </span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-500 font-mono">
+          <div className="flex items-center gap-2.5 sm:gap-3 text-xs text-slate-500 dark:text-slate-400 font-mono">
             <button
               type="button"
               onClick={() => setIsCurrencyModalOpen(true)}
-              className="text-indigo-600 hover:text-indigo-800 font-medium underline cursor-pointer min-h-[32px] inline-flex items-center"
+              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium underline cursor-pointer min-h-[32px] inline-flex items-center"
             >
-              Format: {selectedCurrency}
+              Currency: {selectedCurrency}
             </button>
-            <span>·</span>
+            <span aria-hidden="true" className="text-slate-300 dark:text-slate-700">·</span>
             <span>{expenses.length} records</span>
           </div>
         </div>
 
-        {/* Feature 1: Monthly View Navigator */}
+        {/* Feature: Monthly View Navigator */}
         <section aria-label="Monthly View Selector" className="no-print">
           <MonthlyViewBar
             expenses={expenses}
             selectedMonth={selectedMonth}
             onSelectMonth={setSelectedMonth}
             onExportMonthlyCSV={handleExportMonthlyCSV}
+            selectedCurrency={selectedCurrency}
           />
         </section>
 
@@ -403,12 +459,13 @@ export default function App() {
               onDeleteRecurring={handleDeleteRecurring}
               onToggleActive={handleToggleRecurringActive}
               onLogExpenseNow={handleLogRecurringNow}
+              selectedCurrency={selectedCurrency}
             />
           </section>
         ) : (
           /* Main Dashboard View: Scoped to Selected Month */
-          <>
-            {/* Feature: Budget Alerts Banner (only shown if Budget Goal is enabled) */}
+          <div className="space-y-6 sm:space-y-8">
+            {/* Feature: Budget Alerts Banner (only shown if nearing or exceeded threshold) */}
             {isBudgetGoalEnabled && (
               <section aria-label="Budget Alerts Notification" className="no-print">
                 <BudgetAlertsBanner
@@ -418,59 +475,24 @@ export default function App() {
                   onOpenEditBudget={() => {
                     setActiveMainTab('dashboard');
                   }}
+                  selectedCurrency={selectedCurrency}
                 />
               </section>
             )}
 
-            {/* Visual Summary Cards */}
+            {/* Visual Summary Cards (Total, Number, Highest, Average) */}
             <section aria-label="Financial Summary" className="no-print">
-              <SummaryCards expenses={displayedExpenses} />
+              <SummaryCards
+                expenses={displayedExpenses}
+                selectedCurrency={selectedCurrency}
+              />
             </section>
 
-            {/* Monthly Budget Goal (with Toggle) + Spending Trends Chart */}
-            <section aria-label="Budget and Analytics" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start no-print">
-              {/* Feature: Monthly Budget Goal with ON/OFF Toggle */}
-              <div className="lg:col-span-5">
-                <BudgetGoalCard
-                  expenses={displayedExpenses}
-                  monthlyBudget={monthlyBudget}
-                  isBudgetGoalEnabled={isBudgetGoalEnabled}
-                  onToggleBudgetGoal={() => setIsBudgetGoalEnabled(!isBudgetGoalEnabled)}
-                  onUpdateBudget={handleUpdateBudget}
-                />
-              </div>
-
-              {/* Spending Trends Chart Feature */}
-              <div className="lg:col-span-7">
-                <SpendingTrendsChart expenses={displayedExpenses} />
-              </div>
-            </section>
-
-            {/* Category Distribution + Monthly Budget Trend */}
-            <section aria-label="Category Distribution and Budget Trend" className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start no-print">
-              {/* Category Distribution with interactive SVG donut and quick filtering */}
-              <div className="lg:col-span-6">
-                <CategoryDistributionCard
-                  expenses={displayedExpenses}
-                  activeCategory={activeCategory}
-                  onSelectCategory={setActiveCategory}
-                />
-              </div>
-
-              {/* Monthly Budget Trend showing multi-month budget vs actuals */}
-              <div className="lg:col-span-6">
-                <MonthlyBudgetTrendCard
-                  expenses={expenses}
-                  monthlyBudget={monthlyBudget}
-                />
-              </div>
-            </section>
-
-            {/* 2-Column Responsive Layout: Add/Edit Form & Transactions List */}
-            {/* OVERLAP FIX: lg:sticky lg:top-24 so it never sticks or overlaps in 1-column mobile/tablet view! */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* HERO SECTION: Add / Edit Expense Form & Transactions Ledger */}
+            {/* Positioned right below Summary Cards for optimal information hierarchy */}
+            <section aria-label="Expense Management" className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
               {/* Left Column: Expense Form (Add / Edit) */}
-              <section className="lg:col-span-4 lg:sticky lg:top-24 self-start bg-transparent z-10" aria-label="Expense Form">
+              <div className="lg:col-span-4 lg:sticky lg:top-24 self-start bg-transparent z-10">
                 <ExpenseForm
                   onAddExpense={handleAddExpense}
                   onUpdateExpense={handleUpdateExpense}
@@ -478,10 +500,10 @@ export default function App() {
                   onCancelEdit={() => setEditingExpense(null)}
                   selectedCurrency={selectedCurrency}
                 />
-              </section>
+              </div>
 
               {/* Right Column: Expense Table / List with Real-time Title Search & Category Filter */}
-              <section className="lg:col-span-8" aria-label="Transactions List">
+              <div className="lg:col-span-8">
                 <ExpenseList
                   expenses={displayedExpenses}
                   onEditExpense={(exp) => {
@@ -492,10 +514,67 @@ export default function App() {
                   onResetSampleData={handleResetSampleData}
                   activeCategory={activeCategory}
                   onSelectCategory={setActiveCategory}
+                  selectedCurrency={selectedCurrency}
                 />
-              </section>
-            </div>
-          </>
+              </div>
+            </section>
+
+            {/* SECONDARY SECTION: Analytical Insights & Budget Trends */}
+            {/* Supports the core expense tracker rather than visually cluttering or displacing it */}
+            <section aria-label="Budget and Analytics" className="pt-6 border-t border-slate-200/90 dark:border-slate-800 space-y-6 no-print">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 pb-1">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                    Spending Insights & Budget Pacing
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Projections, daily pacing allowances, and monthly distribution analytics
+                  </p>
+                </div>
+              </div>
+
+              {/* Row 1: Monthly Budget Goal + Spending Trends Chart */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className="lg:col-span-5">
+                  <BudgetGoalCard
+                    expenses={displayedExpenses}
+                    monthlyBudget={monthlyBudget}
+                    isBudgetGoalEnabled={isBudgetGoalEnabled}
+                    onToggleBudgetGoal={() => setIsBudgetGoalEnabled(!isBudgetGoalEnabled)}
+                    onUpdateBudget={handleUpdateBudget}
+                    selectedCurrency={selectedCurrency}
+                  />
+                </div>
+
+                <div className="lg:col-span-7">
+                  <SpendingTrendsChart
+                    expenses={displayedExpenses}
+                    selectedCurrency={selectedCurrency}
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Category Distribution + Monthly Budget Trend */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className="lg:col-span-6">
+                  <CategoryDistributionCard
+                    expenses={displayedExpenses}
+                    activeCategory={activeCategory}
+                    onSelectCategory={setActiveCategory}
+                    selectedCurrency={selectedCurrency}
+                  />
+                </div>
+
+                <div className="lg:col-span-6">
+                  <MonthlyBudgetTrendCard
+                    expenses={expenses}
+                    monthlyBudget={monthlyBudget}
+                    selectedCurrency={selectedCurrency}
+                  />
+                </div>
+              </div>
+            </section>
+          </div>
         )}
       </main>
 
@@ -505,18 +584,20 @@ export default function App() {
         isOpen={expenseToDelete !== null}
         onConfirm={handleConfirmDelete}
         onCancel={() => setExpenseToDelete(null)}
+        selectedCurrency={selectedCurrency}
       />
 
-      {/* Feature: PDF Export Statement Modal */}
+      {/* PDF Export Statement Modal */}
       <ExportPdfModal
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}
         expenses={displayedExpenses}
         monthlyBudget={monthlyBudget}
         selectedMonth={selectedMonth}
+        selectedCurrency={selectedCurrency}
       />
 
-      {/* Feature: Currency Formatter Selector Modal */}
+      {/* Currency Formatter Selector Modal */}
       <CurrencySelectorModal
         isOpen={isCurrencyModalOpen}
         onClose={() => setIsCurrencyModalOpen(false)}
@@ -524,21 +605,21 @@ export default function App() {
         onSelectCurrency={handleSelectCurrency}
       />
 
-      {/* Clean Unboxed Footer with Built With REMOVED */}
-      <footer className="border-t border-slate-200 bg-white py-5 mt-12 no-print">
-        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 text-center sm:text-left">
+      {/* Polished Clean Footer */}
+      <footer className="border-t border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 py-6 mt-16 transition-colors no-print">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400 text-center sm:text-left">
           <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-            <span className="font-semibold text-slate-700">Personal Expense Tracker</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">Personal Expense Tracker</span>
             <span aria-hidden="true" className="hidden xs:inline">·</span>
-            <span>All records stored locally ({selectedCurrency})</span>
+            <span>All records stored locally in browser ({selectedCurrency})</span>
           </div>
-          <div>
+          <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setIsCurrencyModalOpen(true)}
-              className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors cursor-pointer min-h-[32px] inline-flex items-center"
+              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium transition-colors cursor-pointer min-h-[32px] inline-flex items-center"
             >
-              Change Currency Formatter ({selectedCurrency})
+              Currency Formatter ({selectedCurrency})
             </button>
           </div>
         </div>
