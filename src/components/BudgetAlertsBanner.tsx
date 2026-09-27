@@ -54,7 +54,7 @@ export const BudgetAlertsBanner: React.FC<BudgetAlertsBannerProps> = ({
   return (
     <div
       role="alert"
-      className={`rounded-xl border p-4 shadow-xs transition-all ${
+      className={`rounded-xl border p-3.5 sm:p-4 shadow-xs transition-all w-full overflow-hidden ${
         isOverBudget
           ? 'bg-rose-50/90 border-rose-200 text-rose-950'
           : isApproaching
@@ -63,9 +63,9 @@ export const BudgetAlertsBanner: React.FC<BudgetAlertsBannerProps> = ({
       }`}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-start sm:items-center gap-3">
+        <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0">
           <div
-            className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-lg flex items-center justify-center shrink-0 ${
               isOverBudget
                 ? 'bg-rose-100 text-rose-600'
                 : isApproaching
@@ -73,20 +73,20 @@ export const BudgetAlertsBanner: React.FC<BudgetAlertsBannerProps> = ({
                 : 'bg-indigo-100 text-indigo-700'
             }`}
           >
-            <AlertTriangleIcon className="w-5 h-5" />
+            <AlertTriangleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
 
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <h3 className="text-xs sm:text-sm font-bold truncate">
                 {isOverBudget
-                  ? 'Critical Alert: Monthly Budget Exceeded!'
+                  ? 'Critical Alert: Budget Exceeded!'
                   : isApproaching
                   ? `Budget Warning: ${percentUsed.toFixed(1)}% Reached`
                   : 'Budget Alert Settings'}
               </h3>
               <span
-                className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md ${
+                className={`text-[9px] sm:text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md shrink-0 ${
                   isOverBudget
                     ? 'bg-rose-200 text-rose-800'
                     : 'bg-amber-200 text-amber-800'
@@ -96,12 +96,11 @@ export const BudgetAlertsBanner: React.FC<BudgetAlertsBannerProps> = ({
               </span>
             </div>
 
-            <p className="text-xs mt-0.5 opacity-90">
+            <p className="text-[11px] sm:text-xs mt-0.5 opacity-90 leading-relaxed">
               {isOverBudget ? (
                 <>
                   You have exceeded your monthly budget by{' '}
                   <strong className="font-mono font-bold">{formatCurrency(Math.abs(remaining))}</strong>.
-                  Consider curtailing discretionary spending this month.
                 </>
               ) : isApproaching ? (
                 <>
@@ -117,23 +116,23 @@ export const BudgetAlertsBanner: React.FC<BudgetAlertsBannerProps> = ({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
           <button
             type="button"
             onClick={onOpenEditBudget}
-            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-2xs ${
+            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-2xs min-h-[36px] ${
               isOverBudget
                 ? 'bg-rose-600 text-white hover:bg-rose-700'
                 : 'bg-amber-700 text-white hover:bg-amber-800'
             }`}
           >
-            Adjust Budget Goal
+            Adjust Budget
           </button>
 
           <button
             type="button"
             onClick={() => setIsConfigOpen(!isConfigOpen)}
-            className="px-2.5 py-1.5 text-xs font-medium bg-white/80 hover:bg-white text-slate-700 rounded-lg border border-slate-300 transition-colors cursor-pointer"
+            className="px-2.5 py-1.5 text-xs font-medium bg-white/80 hover:bg-white text-slate-700 rounded-lg border border-slate-300 transition-colors cursor-pointer min-h-[36px]"
             title="Configure alert threshold"
           >
             ⚙️ Threshold ({warningThreshold}%)
@@ -142,7 +141,7 @@ export const BudgetAlertsBanner: React.FC<BudgetAlertsBannerProps> = ({
           <button
             type="button"
             onClick={() => setIsDismissed(true)}
-            className="p-1.5 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-black/5 transition-colors cursor-pointer"
+            className="p-2 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-black/5 transition-colors cursor-pointer min-h-[36px] min-w-[36px] flex items-center justify-center"
             title="Dismiss alert banner"
           >
             <XIcon className="w-4 h-4" />

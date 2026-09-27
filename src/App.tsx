@@ -336,14 +336,14 @@ export default function App() {
       )}
 
       {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-2.5 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6">
         {/* Navigation Tabs for Dashboard vs Recurring Subscriptions */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 no-print">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-slate-200 pb-3 no-print">
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => setActiveMainTab('dashboard')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2 sm:py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer min-h-[38px] ${
                 activeMainTab === 'dashboard'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
@@ -356,7 +356,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveMainTab('recurring')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2 sm:py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer min-h-[38px] ${
                 activeMainTab === 'recurring'
                   ? 'bg-slate-900 text-white shadow-xs'
                   : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
@@ -370,11 +370,11 @@ export default function App() {
             </button>
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-slate-500 font-mono">
+          <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-500 font-mono">
             <button
               type="button"
               onClick={() => setIsCurrencyModalOpen(true)}
-              className="text-indigo-600 hover:text-indigo-800 font-medium underline cursor-pointer"
+              className="text-indigo-600 hover:text-indigo-800 font-medium underline cursor-pointer min-h-[32px] inline-flex items-center"
             >
               Format: {selectedCurrency}
             </button>
@@ -526,17 +526,17 @@ export default function App() {
 
       {/* Clean Unboxed Footer with Built With REMOVED */}
       <footer className="border-t border-slate-200 bg-white py-5 mt-12 no-print">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 text-center sm:text-left">
+          <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
             <span className="font-semibold text-slate-700">Personal Expense Tracker</span>
-            <span aria-hidden="true">·</span>
-            <span>All records stored locally in browser ({selectedCurrency})</span>
+            <span aria-hidden="true" className="hidden xs:inline">·</span>
+            <span>All records stored locally ({selectedCurrency})</span>
           </div>
           <div>
             <button
               type="button"
               onClick={() => setIsCurrencyModalOpen(true)}
-              className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors cursor-pointer"
+              className="text-indigo-600 hover:text-indigo-800 font-medium transition-colors cursor-pointer min-h-[32px] inline-flex items-center"
             >
               Change Currency Formatter ({selectedCurrency})
             </button>

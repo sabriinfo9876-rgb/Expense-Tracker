@@ -117,11 +117,11 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
+    <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs w-full overflow-hidden">
       {/* Header and Budget Goal Toggle Switch */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -136,11 +136,11 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
           </div>
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900">
+          <div className="min-w-0">
+            <h2 className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
               Monthly Budget Goal ({currentMonthName})
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-[11px] sm:text-xs text-slate-500 truncate">
               {isBudgetGoalEnabled
                 ? 'Target cap vs actual monthly expenses'
                 : 'Budget tracking is currently turned off'}
@@ -149,14 +149,14 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
         </div>
 
         {/* Feature: Budget Goal Toggle Switch */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between sm:justify-end gap-3 pt-1 sm:pt-0">
           <label className="flex items-center gap-2 cursor-pointer select-none" title="Toggle Budget Goal on/off">
             <span className="text-xs font-medium text-slate-600">
               {isBudgetGoalEnabled ? 'Goal: On' : 'Goal: Off'}
             </span>
             <div
               onClick={onToggleBudgetGoal}
-              className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer ${
+              className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer shrink-0 ${
                 isBudgetGoalEnabled ? 'bg-indigo-600' : 'bg-slate-300'
               }`}
             >
@@ -175,7 +175,7 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
                 setBudgetValue(monthlyBudget.toString());
                 setIsEditing(true);
               }}
-              className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-indigo-600 px-2 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-indigo-600 px-2.5 py-1 rounded-md hover:bg-slate-100 transition-colors cursor-pointer min-h-[32px]"
             >
               <EditIcon className="w-3.5 h-3.5" />
               Edit
@@ -321,47 +321,47 @@ export const BudgetGoalCard: React.FC<BudgetGoalCardProps> = ({
               </span>
             </div>
 
-            {/* 3-Column Daily Pacing Stat Breakdown */}
-            <div className="grid grid-cols-3 gap-2 text-center mb-2.5">
+            {/* Daily Pacing Stat Breakdown - Responsive grid for 320px+ */}
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 text-center mb-2.5">
               {/* Suggested Remainder Allowance */}
-              <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs">
+              <div className="bg-white p-2.5 sm:p-2 rounded-lg border border-slate-200 shadow-2xs min-w-0">
                 <span className="text-[10px] text-slate-400 font-medium block truncate">
-                  Suggested Daily Remainder
+                  Suggested Remainder
                 </span>
                 <span
-                  className={`text-xs sm:text-sm font-bold font-mono tabular-nums block ${
+                  className={`text-xs sm:text-sm font-bold font-mono tabular-nums block truncate ${
                     isOverBudget ? 'text-rose-600' : 'text-indigo-600'
                   }`}
                 >
                   {formatCurrency(suggestedDailyAllowance)}
                 </span>
-                <span className="text-[9px] text-slate-400 block">
+                <span className="text-[9px] text-slate-400 block truncate">
                   Next {daysRemaining} days
                 </span>
               </div>
 
               {/* Baseline Daily Goal */}
-              <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs">
+              <div className="bg-white p-2.5 sm:p-2 rounded-lg border border-slate-200 shadow-2xs min-w-0">
                 <span className="text-[10px] text-slate-400 font-medium block truncate">
-                  Baseline Daily Cap
+                  Baseline Cap
                 </span>
-                <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-800 block">
+                <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-800 block truncate">
                   {formatCurrency(baselineDailyGoal)}
                 </span>
-                <span className="text-[9px] text-slate-400 block">
-                  1/{totalDaysInMonth}th of budget
+                <span className="text-[9px] text-slate-400 block truncate">
+                  1/{totalDaysInMonth}th / day
                 </span>
               </div>
 
               {/* Spent Today */}
-              <div className="bg-white p-2 rounded-lg border border-slate-200 shadow-2xs">
+              <div className="bg-white p-2.5 sm:p-2 rounded-lg border border-slate-200 shadow-2xs min-w-0">
                 <span className="text-[10px] text-slate-400 font-medium block truncate">
                   Spent Today
                 </span>
-                <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-800 block">
+                <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-800 block truncate">
                   {formatCurrency(spentToday)}
                 </span>
-                <span className="text-[9px] text-slate-400 block">
+                <span className="text-[9px] text-slate-400 block truncate">
                   Day {currentDay} of {totalDaysInMonth}
                 </span>
               </div>

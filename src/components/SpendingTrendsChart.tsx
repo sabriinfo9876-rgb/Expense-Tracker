@@ -87,19 +87,19 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
+    <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs w-full overflow-hidden">
       {/* Header and View Mode Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+      <div className="flex flex-col xs:flex-row xs:items-center justify-between gap-3 pb-3 sm:pb-4 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
               <ArrowTrendingUpIcon className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-slate-900">
+              <h2 className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
                 Spending Trends & Analytics
               </h2>
-              <p className="text-xs text-slate-500">
+              <p className="text-[11px] sm:text-xs text-slate-500">
                 {viewMode === 'timeline'
                   ? 'Daily expenditure distribution across logged dates'
                   : 'Spending breakdown ranked by category volume'}
@@ -186,8 +186,8 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
 
       {/* View 1: Timeline Bar Chart */}
       {viewMode === 'timeline' && (
-        <div className="pt-3">
-          <div className="h-48 w-full flex items-end gap-2 sm:gap-3 px-2 pb-6 border-b border-slate-200 relative">
+        <div className="pt-3 overflow-x-auto no-scrollbar">
+          <div className="h-44 sm:h-48 min-w-[260px] w-full flex items-end gap-1.5 sm:gap-3 px-1 sm:px-2 pb-6 border-b border-slate-200 relative">
             {/* Horizontal Grid lines */}
             <div className="absolute inset-0 pointer-events-none flex flex-col justify-between pb-6 text-[10px] text-slate-300">
               <div className="border-b border-dashed border-slate-200 w-full" />
@@ -202,7 +202,14 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
               return (
                 <div
                   key={d.date}
-                  className="flex-1 h-full flex flex-col justify-end items-center group relative cursor-pointer z-10"
+                  className="flex-1 h-full flex flex-col justify-end items-center group relative cursor-pointer z-10 min-w-[14px]"
+                  onClick={() =>
+                    setHoveredItem({
+                      label: formatDate(d.date),
+                      amount: d.amount,
+                      count: d.count,
+                    })
+                  }
                   onMouseEnter={() =>
                     setHoveredItem({
                       label: formatDate(d.date),
@@ -223,7 +230,7 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
                   />
 
                   {/* X Axis Label */}
-                  <div className="absolute -bottom-6 text-[10px] sm:text-xs text-slate-500 font-mono whitespace-nowrap truncate max-w-full text-center">
+                  <div className="absolute -bottom-6 text-[9px] sm:text-xs text-slate-500 font-mono whitespace-nowrap truncate max-w-full text-center">
                     {d.date.slice(5)} {/* MM-DD */}
                   </div>
                 </div>
@@ -231,9 +238,9 @@ export const SpendingTrendsChart: React.FC<SpendingTrendsChartProps> = ({ expens
             })}
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-7">
+          <div className="flex items-center justify-between text-[10px] sm:text-[11px] text-slate-400 mt-7 min-w-[260px]">
             <span>Earliest Date</span>
-            <span className="font-mono">Daily Spending (PKR)</span>
+            <span className="font-mono">Daily Spending</span>
             <span>Latest Date</span>
           </div>
         </div>

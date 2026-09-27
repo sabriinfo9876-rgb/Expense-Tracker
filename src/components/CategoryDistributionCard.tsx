@@ -71,18 +71,18 @@ export const CategoryDistributionCard: React.FC<CategoryDistributionCardProps> =
     : null;
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
+    <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs w-full overflow-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
             <PieChartIcon className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">
+            <h2 className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
               Category Distribution
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-[11px] sm:text-xs text-slate-500">
               Proportional expenditure breakdown across categories
             </p>
           </div>
@@ -232,7 +232,7 @@ export const CategoryDistributionCard: React.FC<CategoryDistributionCardProps> =
 
                   {item.highest && (
                     <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5 font-mono">
-                      <span className="truncate max-w-[200px]">Top: {item.highest.title}</span>
+                      <span className="truncate max-w-[120px] xs:max-w-[180px] sm:max-w-[200px]">Top: {item.highest.title}</span>
                       <span>{formatCurrency(item.highest.amount)}</span>
                     </div>
                   )}

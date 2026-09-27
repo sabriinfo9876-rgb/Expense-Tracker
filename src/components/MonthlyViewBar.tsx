@@ -125,20 +125,21 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="bg-white rounded-xl border border-slate-200/90 p-3 sm:p-4 shadow-xs w-full overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
         {/* Left: Month Navigator & Title */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
           <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
             <CalendarIcon className="w-4 h-4" />
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             <button
               type="button"
               onClick={handlePrevMonth}
               title="Previous Month"
-              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+              aria-label="Previous Month"
+              className="p-2 sm:p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer min-h-[38px] min-w-[38px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center"
             >
               <ChevronLeftIcon className="w-3.5 h-3.5" />
             </button>
@@ -146,7 +147,8 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
             <select
               value={selectedMonth}
               onChange={(e) => onSelectMonth(e.target.value)}
-              className="px-3 py-1.5 text-sm font-semibold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg outline-none cursor-pointer focus:border-indigo-600"
+              aria-label="Select month view"
+              className="px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-900 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg outline-none cursor-pointer focus:border-indigo-600 max-w-[135px] xs:max-w-[190px] sm:max-w-none truncate min-h-[38px] sm:min-h-[36px]"
             >
               <option value="all">📅 All Months (Lifetime)</option>
               {availableMonths.map((m) => (
@@ -160,7 +162,8 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
               type="button"
               onClick={handleNextMonth}
               title="Next Month"
-              className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+              aria-label="Next Month"
+              className="p-2 sm:p-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer min-h-[38px] min-w-[38px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center"
             >
               <ChevronRightIcon className="w-3.5 h-3.5" />
             </button>
@@ -170,9 +173,9 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
             <button
               type="button"
               onClick={() => onSelectMonth('all')}
-              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded-md hover:bg-indigo-50 transition-colors cursor-pointer"
+              className="text-xs text-indigo-600 hover:text-indigo-800 font-medium px-2 py-1 rounded-md hover:bg-indigo-50 transition-colors cursor-pointer min-h-[36px] inline-flex items-center"
             >
-              View All Months
+              View All
             </button>
           )}
 
@@ -181,7 +184,7 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
               type="button"
               onClick={onExportMonthlyCSV}
               title={`Download structured CSV report for ${formatMonthLabel(selectedMonth)}`}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-md shadow-2xs transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-md shadow-2xs transition-colors cursor-pointer min-h-[36px]"
             >
               <DownloadIcon className="w-3 h-3 text-slate-500" />
               <span>Monthly CSV</span>
@@ -190,21 +193,21 @@ export const MonthlyViewBar: React.FC<MonthlyViewBarProps> = ({
         </div>
 
         {/* Right: Quick Month Statistics Banner */}
-        <div className="flex flex-wrap items-center gap-4 text-xs">
-          <div className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/80">
-            <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-4 text-xs w-full md:w-auto">
+          <div className="bg-slate-50 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200/80">
+            <span className="text-slate-400 block text-[10px] uppercase font-semibold truncate">
               {selectedMonth === 'all' ? 'Lifetime Total' : `${formatMonthLabel(selectedMonth)} Total`}
             </span>
-            <span className="text-sm font-bold font-mono tabular-nums text-slate-900">
+            <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-900 truncate block">
               {formatCurrency(monthMetrics.total)}
             </span>
           </div>
 
-          <div className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200/80">
-            <span className="text-slate-400 block text-[10px] uppercase font-semibold">
+          <div className="bg-slate-50 p-2 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200/80">
+            <span className="text-slate-400 block text-[10px] uppercase font-semibold truncate">
               Logged Items
             </span>
-            <span className="text-sm font-bold font-mono tabular-nums text-slate-800">
+            <span className="text-xs sm:text-sm font-bold font-mono tabular-nums text-slate-800 truncate block">
               {monthMetrics.count} transactions
             </span>
           </div>

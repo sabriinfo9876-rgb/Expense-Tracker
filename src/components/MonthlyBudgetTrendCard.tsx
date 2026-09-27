@@ -79,25 +79,25 @@ export const MonthlyBudgetTrendCard: React.FC<MonthlyBudgetTrendCardProps> = ({
   const netTotalSavings = monthlyTrendData.reduce((acc, d) => acc + (d.budget - d.spent), 0);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
+    <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs w-full overflow-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
             <BarChartIcon className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">
+            <h2 className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
               Monthly Budget Trend
             </h2>
-            <p className="text-xs text-slate-500">
+            <p className="text-[11px] sm:text-xs text-slate-500">
               Monthly spending vs target budget goal ({formatCurrency(monthlyBudget)}/mo)
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <span className="inline-flex items-center gap-1 font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+        <div className="flex items-center gap-2 text-xs self-start sm:self-auto">
+          <span className="inline-flex items-center gap-1 font-mono text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md text-[11px]">
             <CheckIcon className="w-3 h-3" />
             {underBudgetCount} of {monthlyTrendData.length} On Budget
           </span>
@@ -126,8 +126,8 @@ export const MonthlyBudgetTrendCard: React.FC<MonthlyBudgetTrendCardProps> = ({
       </div>
 
       {/* Comparative Bar Chart */}
-      <div className="pt-2">
-        <div className="h-44 w-full flex items-end gap-4 sm:gap-6 px-4 pb-6 border-b border-slate-200 relative">
+      <div className="pt-2 overflow-x-auto no-scrollbar">
+        <div className="h-44 min-w-[260px] w-full flex items-end gap-2 sm:gap-6 px-2 sm:px-4 pb-6 border-b border-slate-200 relative">
           {/* Target Budget Reference Line */}
           <div
             className="absolute left-0 right-0 border-b-2 border-dashed border-indigo-300 pointer-events-none z-0"
@@ -135,8 +135,8 @@ export const MonthlyBudgetTrendCard: React.FC<MonthlyBudgetTrendCardProps> = ({
               bottom: `${(monthlyBudget / maxBarValue) * 100}%`,
             }}
           >
-            <span className="absolute right-2 -top-4 text-[10px] font-mono text-indigo-600 bg-white px-1 font-semibold rounded">
-              Budget Target: {formatCurrency(monthlyBudget)}
+            <span className="absolute right-1 sm:right-2 -top-4 text-[9px] sm:text-[10px] font-mono text-indigo-600 bg-white/90 px-1 font-semibold rounded">
+              Budget: {formatCurrency(monthlyBudget)}
             </span>
           </div>
 

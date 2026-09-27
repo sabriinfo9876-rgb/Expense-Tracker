@@ -135,13 +135,13 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
+    <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs w-full overflow-hidden">
       <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
         <div>
-          <h2 className="text-base font-semibold text-slate-900">
+          <h2 className="text-sm sm:text-base font-semibold text-slate-900">
             {editingExpense ? 'Edit Expense' : 'Add New Expense'}
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">
             {editingExpense ? 'Update the details for this transaction.' : 'Record your spending to keep budgets in check.'}
           </p>
         </div>
@@ -149,7 +149,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
           <button
             type="button"
             onClick={onCancelEdit}
-            className="text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1 transition-colors px-2 py-1 rounded-md hover:bg-slate-100"
+            className="text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1 transition-colors px-2.5 py-1.5 rounded-md hover:bg-slate-100 min-h-[36px]"
           >
             <XIcon className="w-3.5 h-3.5" />
             Cancel
@@ -161,10 +161,10 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
       {!editingExpense && (
         <div className="mb-4 pb-3 border-b border-slate-100">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] uppercase font-bold text-slate-400 tracking-wider">
+            <span className="text-[10px] sm:text-[11px] uppercase font-bold text-slate-400 tracking-wider">
               ⚡ Quick Add Shortcuts
             </span>
-            <span className="text-[10px] text-slate-400">Click to fill form</span>
+            <span className="text-[10px] text-slate-400">Tap to fill</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
             {QUICK_ADD_PRESETS.map((p) => (
@@ -177,13 +177,13 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
                   setCategory(p.category);
                   setErrors({});
                 }}
-                className="p-1.5 text-left rounded-lg border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/60 bg-slate-50 transition-all cursor-pointer group"
+                className="p-2 text-left rounded-lg border border-slate-200 hover:border-indigo-400 hover:bg-indigo-50/60 bg-slate-50 transition-all cursor-pointer group min-h-[46px] flex flex-col justify-center min-w-0"
               >
-                <div className="text-[11px] font-medium text-slate-800 truncate flex items-center gap-1">
-                  <span>{p.icon}</span>
+                <div className="text-[11px] font-medium text-slate-800 truncate flex items-center gap-1 min-w-0">
+                  <span className="shrink-0">{p.icon}</span>
                   <span className="truncate">{p.title}</span>
                 </div>
-                <div className="text-[10px] font-mono text-slate-500 font-semibold group-hover:text-indigo-600">
+                <div className="text-[10px] font-mono text-slate-500 font-semibold group-hover:text-indigo-600 truncate mt-0.5">
                   {currencyConfig.symbol.trim() || currencyConfig.code} {p.amount.toLocaleString()}
                 </div>
               </button>
@@ -203,8 +203,8 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
             type="text"
             value={title}
             onChange={handleTitleChange}
-            placeholder="e.g. Grocery shopping, Metro card, Electric bill"
-            className={`w-full px-3 py-2 text-sm rounded-lg border transition-colors outline-none focus:ring-2 focus:ring-indigo-500/20 ${
+            placeholder="e.g. Grocery shopping, Fuel, Bill"
+            className={`w-full px-3 py-2.5 text-base sm:text-sm rounded-lg border transition-colors outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[44px] ${
               errors.title
                 ? 'border-red-400 bg-red-50/20 text-slate-900 focus:border-red-500'
                 : 'border-slate-200 bg-white hover:border-slate-300 focus:border-indigo-600'
@@ -218,7 +218,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
           )}
         </div>
 
-        {/* Amount & Category Row */}
+        {/* Amount & Category Row - Stacks vertically on mobile */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Amount Input */}
           <div>
@@ -226,7 +226,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
               Amount ({currencyConfig.code}) <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold font-mono">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-semibold font-mono pointer-events-none">
                 {currencyConfig.symbol.trim() || currencyConfig.code}
               </span>
               <input
@@ -237,7 +237,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
                 value={amount}
                 onChange={handleAmountChange}
                 placeholder="e.g. 2500"
-                className={`w-full pl-10 pr-3 py-2 text-sm rounded-lg border font-mono tabular-nums transition-colors outline-none focus:ring-2 focus:ring-indigo-500/20 ${
+                className={`w-full pl-10 pr-3 py-2.5 text-base sm:text-sm rounded-lg border font-mono tabular-nums transition-colors outline-none focus:ring-2 focus:ring-indigo-500/20 min-h-[44px] ${
                   errors.amount
                     ? 'border-red-400 bg-red-50/20 text-slate-900 focus:border-red-500'
                     : 'border-slate-200 bg-white hover:border-slate-300 focus:border-indigo-600'
@@ -261,7 +261,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
               id="expense-category"
               value={category}
               onChange={handleCategoryChange}
-              className={`w-full px-3 py-2 text-sm rounded-lg border transition-colors outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white ${
+              className={`w-full px-3 py-2.5 text-base sm:text-sm rounded-lg border transition-colors outline-none focus:ring-2 focus:ring-indigo-500/20 bg-white min-h-[44px] ${
                 errors.category
                   ? 'border-red-400 bg-red-50/20 text-slate-900 focus:border-red-500'
                   : 'border-slate-200 hover:border-slate-300 focus:border-indigo-600'
@@ -295,7 +295,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-white hover:border-slate-300 focus:border-indigo-600 outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700 transition-colors"
+            className="w-full px-3 py-2.5 text-base sm:text-sm rounded-lg border border-slate-200 bg-white hover:border-slate-300 focus:border-indigo-600 outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700 transition-colors min-h-[44px]"
           />
         </div>
 
@@ -303,7 +303,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
         <div className="pt-2 flex items-center gap-2">
           <button
             type="submit"
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-lg shadow-xs transition-colors focus:ring-2 focus:ring-indigo-500/30 focus:outline-none cursor-pointer"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-lg shadow-xs transition-colors focus:ring-2 focus:ring-indigo-500/30 focus:outline-none cursor-pointer min-h-[44px]"
           >
             {editingExpense ? (
               <>
@@ -322,7 +322,7 @@ export const ExpenseForm: React.FC<ExpenseFormProps> = ({
             <button
               type="button"
               onClick={onCancelEdit}
-              className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer"
+              className="px-4 py-3 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer min-h-[44px]"
             >
               Cancel
             </button>

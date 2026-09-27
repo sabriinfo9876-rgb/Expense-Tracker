@@ -106,7 +106,7 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200/90 p-5 shadow-xs">
+    <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 sm:p-5 shadow-xs w-full overflow-hidden">
       {/* Header and Summary */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
@@ -114,15 +114,15 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
             <RepeatIcon className="w-4 h-4" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-slate-900">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xs sm:text-sm font-semibold text-slate-900 truncate">
                 Recurring Expenses & Subscriptions
               </h2>
-              <span className="text-[11px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-md">
+              <span className="text-[10px] sm:text-[11px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-md">
                 {recurringExpenses.filter((r) => r.isActive).length} Active
               </span>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-[11px] sm:text-xs text-slate-500">
               Fixed commitments · Projected: {' '}
               <span className="font-mono font-bold text-slate-800">
                 {formatCurrency(totalMonthlyCommitment)}/mo
@@ -138,7 +138,7 @@ export const RecurringExpensesCard: React.FC<RecurringExpensesCardProps> = ({
               resetForm();
               setIsFormOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors cursor-pointer self-start sm:self-auto shadow-xs"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-xs transition-colors cursor-pointer self-start sm:self-auto min-h-[36px]"
           >
             <PlusIcon className="w-3.5 h-3.5" />
             <span>Add Recurring</span>
